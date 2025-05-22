@@ -147,6 +147,7 @@ def solve_transient_heat_conduction(
             #    T_new[i,j] = T_old[i,j] + αΔt[(T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dx²
             #                  + (T_old[i,j-1] - T_old[i,j])/dy²
             #                  - (h(T_old[i,j] - T_inf) + q_rad)/(k *dy)]
+            # 2025年5月22日18:31:49
             from boundary_condition import HeatTransferCalculator
 
             calculator = HeatTransferCalculator()
