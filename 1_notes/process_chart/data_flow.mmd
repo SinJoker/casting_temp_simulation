@@ -1,0 +1,132 @@
+---
+title: 数据流图
+config:
+      theme: redux
+---
+flowchart-elk TD
+
+        %% 主逻辑模块
+        input e1@==>calculate e2@==>output
+        calculate_section  --> |分段计算模块|calculate_boundary
+
+        %% 分段计算模块数据导入
+        input_process_pulling_speed &  input_mold_height & input_second_cooling_length & input_air_cooling_length -.->|分段计算模块|calculate_section
+        calculate_property & calculate_boundary -.->|核心计算模块|calculate_core
+
+        %% 物性计算模块数据导入
+        input_process_composition_equation & input_property_steel_type & input_property_steel_composition-.->|物性计算模块|calculate_property
+
+        %% 边界条件计算模块数据导入
+        input_process_er_k_a & input_process_er_k_b-.->|边界条件计算模块|calculate_boundary_mold_heat_flow
+        input_process_water_colling_equation & input_process_mold_temperature & input_process_water_temperature & input_process_er_k_le-.->|边界条件计算模块|calculate_boundary_pressure
+        input_process_emissivity & input_process_air_k_le & input_process_air_k_le & input_process_air_temperature -.->|边界条件计算模块|calculate_boundary_air_heat_flow
+
+        %% 位置调整
+        calculate_property ~~~ calculate_boundary ~~~ calculate_section
+
+        %% 动画
+        e1@{ animate: true }
+        e2@{ animate: true }
+
+        direction LR
+        subgraph input [数据输入]
+            subgraph input_size[尺寸参数]
+                input_slab_width(宽度)
+                input_slab_thickness(厚度)
+                input_mold_height(结晶器高度)
+                %% 二冷区长度
+                input_second_cooling_length(二冷区尺寸:第i段长度)
+                %% 空冷区长度
+                input_air_cooling_length(空冷区长度)
+            end
+            subgraph input_property[物性参数]
+                %% 钢的元素成分
+                input_property_steel_composition(钢的元素成分：C、Si、Cr等)
+                %% 钢的种类
+                input_property_steel_type(钢的种类：普碳钢、不锈钢等)
+            end
+            %% 工艺参数
+            subgraph input_process[工艺参数]
+                %% 连铸拉速
+                input_process_pulling_speed(拉速)
+                %% 二冷区水量le
+                input_process_er_k_le(二冷区水量)
+                %% 空冷区空气量
+                input_process_air_k_le(空冷区空气量)
+                %% 空气温度
+                input_process_air_temperature(空气温度)
+                %% 浇铸温度
+                input_process_mold_temperature(浇铸温度)
+                %% 结晶器热流密度系数A
+                input_process_er_k_a(结晶器热流密度系数A)
+                %% 结晶器热流密度系数B
+                input_process_er_k_b(结晶器热流密度系数B)
+                %% 二冷区冷却水温度
+                input_process_water_temperature(二冷区冷却水温度)
+                %% 二冷区冷却公式选择
+                input_process_water_colling_equation(二冷区冷却公式选择)
+                %% 成分计算公式选择
+                input_process_composition_equation(成分计算公式选择)
+                %% 发射率
+                input_process_emissivity(发射率)
+            end
+        end
+
+
+        subgraph calculate[数据计算]
+        direction LR
+            calculate_property ~~~ calculate_section ~~~ calculate_boundary ~~~calculate_core
+            %% 物性计算模块
+            subgraph calculate_property[物性计算]
+                calculate_property_density(密度)
+                calculate_property_specific_heat(热容)
+                calculate_property_thermal_conductivity(导热系数)
+                %% 固相线温度
+                calculate_property_solid_line_temperature(固相线温度)
+                %% 液相线温度
+                calculate_property_liquid_line_temperature(液相线温度)
+            end
+            %% 边界条件计算模块
+            subgraph calculate_boundary[边界条件计算]
+                calculate_boundary_mold_heat_flow(结晶器冷却热流量)
+                calculate_boundary_pressure(各二冷区对流换热系数)
+                %% 空冷区热流量
+                calculate_boundary_air_heat_flow(空冷区热流量)
+            end
+            %% 核心计算模块
+            subgraph calculate_core[核心计算]
+                calculate_core_temperature(温度场计算)
+                %% 三相分布
+                calculate_core_three_phase_distribution(三相分布)
+                %% 坯壳厚度
+                calculate_core_shell_thickness(坯壳厚度)
+            end
+            %% 分段模块
+            subgraph calculate_section[分段计算]
+                %% 结晶器时间范围
+                calculate_mold_section_time_range(结晶器时间范围)
+                %% 二冷区时间范围
+                calculate_second_cooling_section_time_range(二冷区时间范围)
+                %% 空冷区时间范围
+                calculate_air_cooling_section_time_range(空冷区时间范围)
+            end
+        end
+
+
+        subgraph output[数据输出]
+            %% 绘图模块
+            subgraph plot[绘图]
+                %% 各阶段的温度分布热图
+                plot_temperature_distribution_heatmap(各阶段的温度分布热图)
+                %% 各个特征位置的温度曲线图
+                plot_temperature_curve(各个特征位置的温度曲线图)
+            end
+            subgraph output_data[数据输出]
+                %% 温度分布
+                output_data_temperature_distribution(温度分布)
+                %% 温度曲线
+                output_data_temperature_curve(温度曲线)
+                %% 坯壳厚度
+                output_data_shell_thickness(坯壳厚度)
+            end
+        end

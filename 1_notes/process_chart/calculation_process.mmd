@@ -1,0 +1,145 @@
+%%{init: {'config': {'elk': {'layoutOptions': {
+    'org.eclipse.elk.alignment': 'CENTER',
+    'org.eclipse.elk.direction': 'DOWN',
+    'org.eclipse.elk.spacing.nodeNode': '20',
+    'org.eclipse.elk.hierarchyHandling': 'INCLUDE_CHILDREN'
+}}}}%%
+
+flowchart-elk
+
+
+    %% 传递流程
+    start(("开始"))
+    start e0@==> input
+    input e1@==> initialization
+    initialization e2@==> calculation
+    calculation e3@==>output
+    output e4@==>complish(("完成"))
+
+    e0@{ animate: true }
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+    e4@{ animate: true }
+
+
+
+    slab_temperature-.->|初始化模块|temperature_field_initialization
+
+    size_input-.->|初始化模块|boundary_condition_segmentation
+    calculation_input-.->|初始化模块|boundary_condition_segmentation
+    size_input & para_input & calculation_input
+
+    para_input-.->|物性计算模块|material_initialization
+
+    temperature_field_calculation["温度场计算"]-->|物性计算模块|material_field_calculation
+    material_field_calculation-->|核心迭代模块|temperature_field_calculation
+
+
+    %% 尺寸参数排列调整
+    slab_width~~~slab_thickness~~~mold_height~~~length_of_each_secondary_cooling_zone~~~air_cooling_zone~~~emissivity
+    %% 计算参数排列调整
+    speed_of_casting~~~slab_temperature~~~space_step~~~time_step~~~cooling_water_amount_of_each_secondary_cooling_zone~~~ambient_temperature
+    %% 物性参数排列调整
+    component~~~steel_class
+    %% 参数输入
+    direction LR
+    subgraph input["参数输入"]
+        subgraph size_input["尺寸参数"]
+            %% 板坯宽度
+            slab_width(板宽)
+            %% 板坯厚度
+            slab_thickness(板厚)
+            %% 结晶器高度
+            mold_height(结晶器高度)
+            %% 各二冷区长度
+            length_of_each_secondary_cooling_zone(各二冷区长度)
+            %% 空冷区长度
+            air_cooling_zone(空冷区长度)
+            %% 发射率
+            emissivity(发射率)
+        end
+        subgraph para_input["物性参数"]
+            component("元素成分")
+            %% 钢的分类
+            steel_class("钢的分类")
+        end
+        subgraph calculation_input["计算参数"]
+            %% 连铸拉速
+            speed_of_casting("连铸拉速")
+            %% 浇铸温度
+            slab_temperature("浇铸温度")
+            %% 空间步长
+            space_step("空间步长")
+            %% 时间步长
+            time_step("时间步长")
+            %% 各二冷区冷却水量
+            cooling_water_amount_of_each_secondary_cooling_zone("各二冷区冷却水量")
+            %% 环境温度
+            ambient_temperature("环境温度")
+        end
+    end
+
+    %% 参数计算
+    subgraph initialization["初始化参数"]
+        %% 温度场初始化
+        temperature_field_initialization("温度场初始化")
+        %% 物性初始化
+        density_initialization~~~conductivity_initialization~~~specific_heat_capacity_initialization
+        subgraph material_initialization["物性初始化"]
+            %% 密度初始化
+            density_initialization("密度初始化")
+            conductivity_initialization("导热系数初始化")
+            specific_heat_capacity_initialization("比热容初始化")
+        end
+        %%  边界条件分段
+        mold_initialization~~~air_cooling_zone_initialization~~~secondary_cooling_zone_initialization
+        subgraph boundary_condition_segmentation["边界条件分段"]
+            %% 结晶器区初始化
+            mold_initialization("晶器区初始化")
+            %% 空冷区初始化
+            air_cooling_zone_initialization("空冷区初始化")
+            %% 二冷区初始化
+            secondary_cooling_zone_initialization("二冷区初始化")
+        end
+
+    end
+
+    %% 循环计算
+    subgraph calculation["迭代计算"]
+        %% 边界条件判断
+
+        subgraph temp_para_calculation["温度场与物性场迭代计算"]
+        %% 温度场计算
+        temperature_field_calculation("温度场计算")
+        %% 物性场计算
+        direction LR
+        subgraph material_field_calculation["物性场计算"]
+            density_calculation("密度计算")
+            conductivity_calculation("导热系数计算")
+            specific_heat_capacity_calculation("比热容计算")
+        end
+        end
+    end
+
+    basic_information~~~temperature_field~~~material_field~~~etc
+    subgraph output["输出结果"]
+        %% 基本信息
+        basic_information("基本信息")
+        %% 温度场
+        temperature_field("温度场")
+        %% 物性场
+        subgraph material_field["物性场"]
+            density("密度")
+            conductivity("导热系数")
+            specific_heat_capacity("比热容")
+        end
+        etc(...)
+    end
+
+    %% %% Individual node styling. Try the visual editor toolbar for easier styling!
+    %%     style E color:#FFFFFF, fill:#AA00FF, stroke:#AA00FF
+    %%     style G color:#FFFFFF, stroke:#00C853, fill:#00C853
+    %%     style I color:#FFFFFF, stroke:#2962FF, fill:#2962FF
+
+    %% %% You can add notes with two "%" signs in a row!

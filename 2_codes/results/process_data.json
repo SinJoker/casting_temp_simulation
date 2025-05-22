@@ -1,0 +1,72 @@
+{
+    "mold_parameters": {
+        "casting_temperature": 1550.0,
+        "casting_speed": 1.2,
+        "heat_flow_factor": 1.0,
+        "slab_width": 0.8,
+        "slab_thickness": 0.12,
+        "liquid_steel_height": 0.5,
+        "mold_length": 1.0,
+        "heat_flux_a": 2680000.0,
+        "heat_flux_b": 276000.0
+    },
+    "spray_parameters": {
+        "zone_count": 5,
+        "width_flows": [
+            20.0,
+            20.0,
+            20.0,
+            20.0,
+            20.0
+        ],
+        "thickness_flows": [
+            20.0,
+            20.0,
+            20.0,
+            20.0,
+            20.0
+        ],
+        "water_temps": [
+            25.0,
+            25.0,
+            25.0,
+            25.0,
+            25.0
+        ],
+        "segment_length": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+        ],
+        "cooling_formula": "Mitsutsuka",
+        "heat_transfer_coefficients": [
+            {
+                "top": 737.1535,
+                "side": 2781.5961
+            },
+            {
+                "top": 737.1535,
+                "side": 2781.5961
+            },
+            {
+                "top": 737.1535,
+                "side": 2781.5961
+            },
+            {
+                "top": 737.1535,
+                "side": 2781.5961
+            },
+            {
+                "top": 737.1535,
+                "side": 2781.5961
+            }
+        ]
+    },
+    "air_cooling_parameters": {
+        "emissivity": 0.8,
+        "ambient_temp": 0.0,
+        "cooling_length": 3.0
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "const_properties": {
+        "lamda_s": 31.333,
+        "lamda_m": 41.27,
+        "lamda_l": 41.27,
+        "c_s": 665.311,
+        "c_m": 700,
+        "c_l": 743.5,
+        "rho_s": 7600,
+        "rho_m": 7400,
+        "rho_l": 7200,
+        "l_f": 270000
+    },
+    "liquid_temp": 1510.26,
+    "solid_temp": 1415.725
+}

@@ -1,0 +1,293 @@
+{
+    "formulas": [
+        {
+            "name": "Mitsutsuka",
+            "description": "E.Mitsutsuka公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_w": "冷却水温度(℃)"
+            },
+            "formula": "h = (V^(n)) * (1 - b * T_(w))",
+            "formula_latex": "h=V^{n}(1-bT_{w})",
+            "valid_range": "10 ≤ V ≤ 10.3",
+            "notes": "0.65 < n < 0.75, 0.005 < b < 0.008",
+            "enabled": true
+        },
+        {
+            "name": "Shimada",
+            "description": "M.Shimada公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_w": "冷却水温度(℃)"
+            },
+            "formula": "h = 1.57 * (V^(0.55)) * (1 - 0.0075 * T_w)",
+            "formula_latex": "h=1.57V^{0.55}(1-0.0075T_{w})",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "Miikar_0.276",
+            "description": "E.Miikar公式(0.276MPa)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = 0.0776 * V",
+            "formula_latex": "h=0.0776V",
+            "valid_range": "0 ≤ V ≤ 20.3",
+            "enabled": true
+        },
+        {
+            "name": "Miikar_0.620",
+            "description": "E.Miikar公式(0.620MPa)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = 0.1 * V",
+            "formula_latex": "h = 0.1V",
+            "valid_range": "0 ≤ V ≤ 20.3",
+            "enabled": true
+        },
+        {
+            "name": "Ishiguro",
+            "description": "M.Ishiguro公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_w": "冷却水温度(℃)"
+            },
+            "formula": "h = 0.581 * (V^(0.451)) * (1 - 0.0075 * T_w)",
+            "formula_latex": "h=0.581V^{0.451}(1-0.0075T_{w})",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "Bolle_Moureou",
+            "description": "E.Bolle Moureou公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)"
+            },
+            "formula": "h = 0.423 * (V^(0.556)) 或 h = 0.360 * (V^(0.556))",
+            "formula_latex": "h = 0.423 * (V^(0.556)) 或 h = 0.360 * (V^(0.556))",
+            "valid_range": "1 < V < 7且627 < T_s < 927 或 0.8 < V < 2.5且727 < T_s < 1027",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s"
+        },
+        {
+            "name": "Sasaki",
+            "description": "K.Sasaki公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)"
+            },
+            "formula": "h = 708 * (V^(0.75)) * (T_s^(-1.2)) + 0.116",
+            "formula_latex": "h = 708 * (V^(0.75)) * (T_s^(-1.2)) + 0.116",
+            "unit": "kW/m²·K",
+            "valid_range": "1.67 ≤ V ≤ 41.7且700 ≤ T_s ≤ 1200",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s"
+        },
+        {
+            "name": "Mizikar",
+            "description": "E.Mizikar公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = (0.076 - 0.10 * V) * 1.163 / 1000",
+            "formula_latex": "h=(0.076-0.10V)\\frac{1.163}{1000}",
+            "valid_range": "0 ≤ V ≤ 20.3",
+            "enabled": false
+        },
+        {
+            "name": "Concast",
+            "description": "Concast公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_w": "冷却水温度(℃)"
+            },
+            "formula": "h = 0.875 * 5748 * (1 - 0.0075 * T_w) * (V^(0.451))",
+            "formula_latex": "h=0.875\\times5748(1-0.0075T_{w})V^{0.451}",
+            "unit": "kW/m²·K",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "BUIST",
+            "description": "BUIST公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = (0.35 * V + 0.13) * 1.163 / 1000",
+            "formula_latex": "h=(0.35V+0.13)\\frac{1.163}{1000}",
+            "valid_range": "4.5 ≤ V ≤ 20",
+            "enabled": true
+        },
+        {
+            "name": "CaiKaike",
+            "description": "蔡开科公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_w": "冷却水温度(℃)"
+            },
+            "formula": "h = 2.25e4 * (1 - 0.00075 * T_w) * (V^(0.55))",
+            "formula_latex": "h=2.25\\times10^{4}(1-0.00075T_{w})V^{0.55}",
+            "unit": "kW/m²·K",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "ZhangKeqiang",
+            "description": "张克强公式(0.25MPa压力)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)"
+            },
+            "formula": "h = 0.37 + 0.35 * (V^(0.954))",
+            "formula_latex": "h = 0.37 + 0.35 * (V^(0.954))",
+            "valid_range": "仅T_s=900℃有效",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s"
+        },
+        {
+            "name": "Billet",
+            "description": "方坯二次冷却区公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)"
+            },
+            "formula": "h = 1.095e12 * (T_s^(-4.15)) * (V^(0.75)) (T_s>900) 或 3.78e3 * (T_s^(-1.34)) * (V^(0.785)) (500<T_s≤900)",
+            "formula_latex": "h = 1.095e12 * (T_s^(-4.15)) * (V^(0.75)) (T_s>900) 或 3.78e3 * (T_s^(-1.34)) * (V^(0.785)) (500<T_s≤900)",
+            "valid_range": "分温度区间计算",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s"
+        },
+        {
+            "name": "Sasaki_K",
+            "description": "佐佐木宽太郎公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)"
+            },
+            "formula": "h = 2.293e8 * (V^(0.616)) * (T_s^(-2.445)) (600≤T_s≤900) 或 2.830e7 * (V^(0.75)) * (T_s^(-1.2)) (900<T_s≤1200)",
+            "formula_latex": "h = 2.293e8 * (V^(0.616)) * (T_s^(-2.445)) (600≤T_s≤900) 或 2.830e7 * (V^(0.75)) * (T_s^(-1.2)) (900<T_s≤1200)",
+            "valid_range": "600 ≤ T_s ≤ 1200",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s"
+        },
+        {
+            "name": "Concast_Journal",
+            "description": "Concast期刊公式(默认压力0.276MPa)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = 9.0 * (0.276^(0.2)) * (V^(0.75))",
+            "formula_latex": "h=9.0 \\times p_{w}^{0.2}\\cdot V^{0.75}",
+            "unit": "kW/m²·K",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "Tegurashi",
+            "description": "手鸠俊雄公式(默认空气流量密度10 NL/m²·s, KT=1.0)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "W_a": "空气流量密度(NL/m²·s)",
+                "K_T": "温度修正系数"
+            },
+            "formula": "h = 280.56 * (W_a^(0.1373)) * (V^(0.75)) * K_T",
+            "formula_latex": "h = 280.56 * (W_a^(0.1373)) * (V^(0.75)) * K_T",
+            "unit": "kW/m²·K",
+            "valid_range": "无明确限制",
+            "enabled": false,
+            "disabled_reason": "需要额外参数W_a, K_T"
+        },
+        {
+            "name": "Nippon_Steel",
+            "description": "新日铁PMD公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = (9.0 * (V^(0.85)) + 100) * 1.163 / 1000",
+            "formula_latex": "h=(9.0V^{0.85}+100)\\frac{1.163}{1000}",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "Okamura",
+            "description": "冈村一男公式(默认va=21.5m/s, Th=293K)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)",
+                "v_a": "空气流速(m/s)",
+                "T_h": "环境温度(K)"
+            },
+            "formula": "h = (5.35 * (T_s^(0.12)) * (V^(0.52)) * (v_a^(0.37)) + h_rad) / 1000",
+            "formula_latex": "h = (5.35 * (T_s^(0.12)) * (V^(0.52)) * (v_a^(0.37)) + h_rad) / 1000",
+            "valid_range": "无明确限制",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s, v_a, T_h"
+        },
+        {
+            "name": "Kashima",
+            "description": "鹿岛3号板坯连铸机公式(默认va=20m/s, z=1)",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "T_s": "板坯表面温度(℃)",
+                "v_a": "空气流速(m/s)",
+                "z": "修正系数"
+            },
+            "formula": "h = 10^1.48 * (V^(0.6293)) * (T_s^(-0.1358)) * (v_a^(0.2734)) * z",
+            "formula_latex": "h = 10^1.48 * (V^(0.6293)) * (T_s^(-0.1358)) * (v_a^(0.2734)) * z",
+            "unit": "kW/m²·K",
+            "valid_range": "无明确限制",
+            "enabled": false,
+            "disabled_reason": "需要额外参数T_s, v_a, z"
+        },
+        {
+            "name": "Hitachi",
+            "description": "日立造船技报公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)"
+            },
+            "formula": "h = 70.4 * (V^(0.31343))",
+            "formula_latex": "h=70.4V^{0.31343}",
+            "unit": "kW/m²·K",
+            "valid_range": "无明确限制",
+            "enabled": true
+        },
+        {
+            "name": "Muller_Jeachar",
+            "description": "H.Muller Jeachar公式",
+            "parameters": {
+                "V": "水量密度(L/m²·s)",
+                "u_c": "空气流速(m/s)"
+            },
+            "formula": "h = 0.42 * (V^(0.35)) * (u_c^(0.5))",
+            "formula_latex": "h = 0.42 * (V^(0.35)) * (u_c^(0.5))",
+            "unit": "kW/m²·K",
+            "valid_range": "0.3 ≤ V ≤ 9.0且11 ≤ u_c ≤ 32m/s",
+            "enabled": false,
+            "disabled_reason": "需要额外参数u_c"
+        }
+    ],
+    "units": {
+        "V": "L/m²·s",
+        "T_s": "℃",
+        "T_w": "℃",
+        "h": "kW/m²·K"
+    },
+    "last_updated": "2025-05-15",
+    "enabled_formulas": [
+        "Mitsutsuka",
+        "Shimada",
+        "Miikar_0.276",
+        "Miikar_0.620",
+        "Ishiguro",
+        "Mizikar",
+        "Concast",
+        "BUIST",
+        "CaiKaike",
+        "Concast_Journal",
+        "Nippon_Steel",
+        "Hitachi"
+    ]
+}

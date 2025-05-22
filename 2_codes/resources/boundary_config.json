@@ -1,0 +1,28 @@
+{
+    "total_time": 180,
+    "segments": [
+        {
+            "start": 0,
+            "end": 60,
+            "type": "third_kind",
+            "h_top": 1000,
+            "h_right": 1000,
+            "T_inf_top": 30,
+            "T_inf_right": 30
+        },
+        {
+            "start": 60,
+            "end": 120,
+            "type": "second_kind",
+            "q_top": -50000,
+            "q_right": -50000
+        },
+        {
+            "start": 120,
+            "end": 180,
+            "type": "second_kind",
+            "q_top": -30000,
+            "q_right": -30000
+        }
+    ]
+}
