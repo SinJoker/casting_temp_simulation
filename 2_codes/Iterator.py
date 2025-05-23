@@ -311,24 +311,23 @@ def solve_transient_heat_conduction(
             """
             # 计算顶部辐射热流(W/m²)
             q_rad_top = calculator.air_cooling_heat_flux(
-                T_s=T_old[ny - 1, nx - 1], T_a=T_inf_top, emissivity=sigma
+                T_s=T_old[i, j], T_a=T_inf_top, emissivity=sigma
             )
             # 计算右侧辐射热流(W/m²)
             q_rad_right = calculator.air_cooling_heat_flux(
-                T_s=T_old[ny - 1, nx - 1], T_a=T_inf_right, emissivity=sigma
+                T_s=T_old[i, j], T_a=T_inf_right, emissivity=sigma
             )
             # 总热流 = 对流 + 辐射 (W/m²)
-            q_total_top = h_top * (T_old[ny - 1, nx - 1] - T_inf_top) + q_rad_top
-            q_total_right = (
-                h_right * (T_old[ny - 1, nx - 1] - T_inf_right) + q_rad_right
-            )
+            q_total_top = h_top * (T_old[i, j] - T_inf_top) + q_rad_top
+            q_total_right = h_right * (T_old[i, j] - T_inf_right) + q_rad_right
 
             # 角点温度计算公式
-            T[ny - 1, nx - 1] = (
-                k * (T[ny - 1, nx - 2] + T[ny - 2, nx - 1])
-                + q_total_top * dy
-                + q_total_right * dx
-            ) / (2 * k + h_top * dy + h_right * dx)
+            T[i, j] = T_old[i, j] + alpha * dt * (
+                (T_old[i - 1, j] - T_old[i, j]) / dx**2  # x方向
+                + (T_old[i, j - 1] - T_old[i, j]) / dy**2  # y方向
+                - q_total_top / (k * dy)
+                - q_total_right / (k * dx)
+            )
         else:
             """
             第二类边界条件(给定热流密度) - 角点非稳态形式
@@ -356,9 +355,9 @@ def solve_transient_heat_conduction(
             cp = get_specific_heat(T_old[nx - 1, ny - 1])
             alpha = k / (rho * cp)  # 热扩散系数
 
-            T[nx - 1, ny - 1] = T_old[nx - 1, ny - 1] + alpha * dt * (
-                (T_old[nx - 1, ny - 2] - T_old[nx - 1, ny - 1]) / dx**2  # x方向
-                + (T_old[nx - 1, ny - 2] - T_old[nx - 1, ny - 1]) / dy**2  # y方向
+            T[i, j] = T_old[i, j] + alpha * dt * (
+                (T_old[i - 1, j] - T_old[i, j]) / dx**2  # x方向
+                + (T_old[i, j - 1] - T_old[i, j]) / dy**2  # y方向
                 - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
                 / (k * dy)  # 计算当前时间的热流密度并转换为W/m²
                 - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
@@ -408,14 +407,14 @@ def solve_transient_heat_conduction_with_phase_properties(
         initial_temp = np.array(initial_temp)
     nx, ny = initial_temp.shape
     # 网格生成
-    dx = Lx / nx
-    dy = Ly / ny
+    dx = Lx / (nx - 1)
+    dy = Ly / (ny - 1)
     print(f"Lx: {Lx} Ly: {Ly}")
     print(f"nx: {nx} ny: {ny}")
     print(f"dx: {dx} dy: {dy}")
     x = np.linspace(0, Lx, nx)
     y = np.linspace(0, Ly, ny)
-    X, Y = np.meshgrid(y, x)
+    X, Y = np.meshgrid(x, y)  # 修正为(x,y)顺序
     print(f"mesh.shape: {X.shape}")
 
     # 初始热扩散率检查（使用初始温度场的平均温度）
@@ -443,16 +442,15 @@ def solve_transient_heat_conduction_with_phase_properties(
         T_old = T.copy()
 
         # 边界条件处理
+        # 边界条件处理
         # 底部 (对称边界)
-        T[:, 0] = T[:, 1]  # 底部边界(原左侧)
+        T[0, :] = T[1, :]
         # 左侧 (对称边界)
-        T[0, :] = T[1, :]  # 左侧边界(原底部)
-        print("对称边界未出错……")
+        T[:, 0] = T[:, 1]
+
         # 内部节点 - 显式离散
         for i in range(1, nx - 2):
-            # print(f"x内部边界{i}节点未出错……")
             for j in range(1, ny - 2):
-                print(f"y内部边界{i},{j}节点未出错……")
                 # 获取当前温度下的物性参数(使用相态相关计算)
                 k = lamda_cal(
                     T_old[i, j], (i + j) / 2, Ts, Tl, 0, props
@@ -466,101 +464,99 @@ def solve_transient_heat_conduction_with_phase_properties(
                     (T_old[i + 1, j] - 2 * T_old[i, j] + T_old[i - 1, j]) / dx**2
                     + (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1]) / dy**2
                 )
-        print("内部节点数组未出界")
+        # print("内部节点数组未出界")
         # 边界节点处理(与原始函数相同，只是物性计算方式不同)
         # 顶部边界
         j = ny - 1
         if boundary_type == 3:
-            for i in range(1, nx - 1):
-                k = lamda_cal(T[j, i], (i + j) / 2, Ts, Tl, 0, props)
-                q_rad = (
-                    calculator.air_cooling_heat_flux(
-                        T_s=T_old[j, i], T_a=T_inf_top, emissivity=sigma
-                    )
-                    * 1000
+            for i in range(1, nx - 2):
+                k = lamda_cal(T[i, j], (i + j) / 2, Ts, Tl, 0, props)
+                q_rad = calculator.air_cooling_heat_flux(
+                    T_s=T_old[i, j], T_a=T_inf_top, emissivity=sigma
                 )
-                q_total = h_top * (T_old[j, i] - T_inf_top) + q_rad
-                T[j, i] = (
-                    k * (T[j, i + 1] + T[j, i - 1]) / dx**2
-                    + k * T[j - 1, i] / dy**2
-                    + q_total / dy
-                ) / (2 * k / dx**2 + k / dy**2 + h_top / dy)
+                q_total = h_top * (T_old[i, j] - T_inf_top) + q_rad
+                rho = rho_cal(T_old[i, j], Ts, Tl, props)
+                cp = cp_cal(T_old[i, j], Ts, Tl, props)
+                alpha = k / (rho * cp)
+                T[i, j] = T_old[i, j] + alpha * dt * (
+                    (T_old[i + 1, j] - 2 * T_old[i, j] + T_old[i - 1, j]) / dx**2
+                    + (T_old[i, j - 1] - T_old[i, j]) / dy**2
+                    - q_total / (k * dy)
+                )
         else:
             for i in range(1, nx - 1):
-                k = lamda_cal(T_old[j, i], (i + j) / 2, Ts, Tl, 0, props)
-                rho = rho_cal(T_old[j, i], Ts, Tl, props)
-                cp = cp_cal(T_old[j, i], Ts, Tl, props)
+                k = lamda_cal(T_old[i, j], (i + j) / 2, Ts, Tl, 0, props)
+                rho = rho_cal(T_old[i, j], Ts, Tl, props)
+                cp = cp_cal(T_old[i, j], Ts, Tl, props)
                 alpha = k / (rho * cp)
-                T[j, i] = T_old[j, i] + alpha * dt * (
-                    (T_old[j, i + 1] - 2 * T_old[j, i] + T_old[j, i - 1]) / dx**2
-                    + (T_old[j, i] - T_old[j - 1, i]) / dy**2
-                    + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
-                    / (k * dy)
+                T[i, j] = T_old[i, j] + alpha * dt * (
+                    (T_old[i + 1, j] - 2 * T_old[i, j] + T_old[i - 1, j]) / dx**2
+                    + (T_old[i, j] - T_old[i, j - 1]) / dy**2
+                    + calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) / (k * dx)
                 )
 
         # 右侧边界
         i = nx - 1
+        # 右侧边界
+        i = nx - 1
         if boundary_type == 3:
             for j in range(1, ny - 2):
-                k = lamda_cal(T[j, i], (i + j) / 2, Ts, Tl, 0, props)
-                q_rad = (
-                    calculator.air_cooling_heat_flux(
-                        T_s=T_old[j, i], T_a=T_inf_right, emissivity=sigma
-                    )
-                    * 1000
+                k = lamda_cal(T[i, j], (i + j) / 2, Ts, Tl, 0, props)
+                q_rad = calculator.air_cooling_heat_flux(
+                    T_s=T_old[i, j], T_a=T_inf_right, emissivity=sigma
                 )
-                q_total = h_right * (T_old[j, i] - T_inf_right) + q_rad
-                T[j, i] = (k * T[j, i - 1] + q_total * dx) / (k + h_right * dx)
+                q_total = h_right * (T_old[i, j] - T_inf_right) + q_rad
+                rho = rho_cal(T_old[i, j], Ts, Tl, props)
+                cp = cp_cal(T_old[i, j], Ts, Tl, props)
+                alpha = k / (rho * cp)
+                T[i, j] = T_old[i, j] + alpha * dt * (
+                    (T_old[i - 1, j] - T_old[i, j]) / dx**2
+                    + (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1]) / dy**2
+                    - q_total / (k * dx)
+                )
         else:
             for j in range(1, ny - 1):
-                k = lamda_cal(T_old[j, i], (i + j) / 2, Ts, Tl, 0, props)
-                rho = rho_cal(T_old[j, i], Ts, Tl, props)
-                cp = cp_cal(T_old[j, i], Ts, Tl, props)
+                k = lamda_cal(T_old[i, j], (i + j) / 2, Ts, Tl, 0, props)
+                rho = rho_cal(T_old[i, j], Ts, Tl, props)
+                cp = cp_cal(T_old[i, j], Ts, Tl, props)
                 alpha = k / (rho * cp)
-                T[j, i] = T_old[j, i] + alpha * dt * (
-                    (T_old[j, i] - T_old[j, i - 1]) / dx**2
-                    + (T_old[j + 1, i] - 2 * T_old[j, i] + T_old[j - 1, i]) / dy**2
-                    + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
-                    / (k * dx)
+                T[i, j] = T_old[i, j] + alpha * dt * (
+                    (T_old[i - 1, j] - 2 * T_old[i, j] + T_old[i - 1, j]) / dx**2
+                    + (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1]) / dy**2
+                    + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B)) / (k * dx)
                 )
 
-        # 角点处理
-        k = lamda_cal(T[ny - 1, nx - 1], (nx - 1 + ny - 1) / 2, Ts, Tl, 0, props)
+        # 角点处理 (右上角)
+        i = nx - 1
+        j = ny - 1
+        k = lamda_cal(T[i, j], (i + j) / 2, Ts, Tl, 0, props)
         if boundary_type == 3:
-            q_rad_top = (
-                calculator.air_cooling_heat_flux(
-                    T_s=T_old[ny - 1, nx - 1], T_a=T_inf_top, emissivity=sigma
-                )
-                * 1000
+            q_rad_top = calculator.air_cooling_heat_flux(
+                T_s=T_old[i, j], T_a=T_inf_top, emissivity=sigma
             )
-            q_rad_right = (
-                calculator.air_cooling_heat_flux(
-                    T_s=T_old[ny - 1, nx - 1], T_a=T_inf_right, emissivity=sigma
-                )
-                * 1000
+            q_rad_right = calculator.air_cooling_heat_flux(
+                T_s=T_old[i, j], T_a=T_inf_right, emissivity=sigma
             )
-            q_total_top = h_top * (T_old[ny - 1, nx - 1] - T_inf_top) + q_rad_top
-            q_total_right = (
-                h_right * (T_old[ny - 1, nx - 1] - T_inf_right) + q_rad_right
+            q_total_top = h_top * (T_old[i, j] - T_inf_top) + q_rad_top
+            q_total_right = h_right * (T_old[i, j] - T_inf_right) + q_rad_right
+            T[i, j] = T_old[i, j] + alpha * dt * (
+                (T_old[i - 1, j] - T_old[i, j]) / dx**2  # x方向
+                + (T_old[i, j - 1] - T_old[i, j]) / dy**2  # y方向
+                - q_total_top / (k * dy)
+                - q_total_right / (k * dx)
             )
-            T[ny - 1, nx - 1] = (
-                k * (T[ny - 1, nx - 2] + T[ny - 2, nx - 1])
-                + q_total_top * dy
-                + q_total_right * dx
-            ) / (2 * k + h_top * dy + h_right * dx)
         else:
-            rho = rho_cal(T_old[ny - 1, nx - 1], Ts, Tl, props)
-            cp = cp_cal(T_old[ny - 1, nx - 1], Ts, Tl, props)
+            rho = rho_cal(T_old[i, j], Ts, Tl, props)
+            cp = cp_cal(T_old[i, j], Ts, Tl, props)
             alpha = k / (rho * cp)
-            T[ny - 1, nx - 1] = T_old[ny - 1, nx - 1] + alpha * dt * (
-                (T_old[ny - 1, nx - 1] - T_old[ny - 1, nx - 2]) / dx**2
-                + (T_old[ny - 1, nx - 1] - T_old[ny - 2, nx - 1]) / dy**2
-                + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
-                / (k * dy)
-                + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
-                / (k * dx)
+            T[i, j] = T_old[i, j] + alpha * dt * (
+                (T_old[i - 1, j] - T_old[i, j]) / dx**2  # x方向
+                + (T_old[i, j - 1] - T_old[i, j]) / dy**2  # y方向
+                - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
+                / (k * dy)  # 计算当前时间的热流密度并转换为W/m²
+                - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
+                / (k * dx)  # 计算当前时间的热流密度并转换为W/m²
             )
-
         # 记录时间和温度（可选）
         if n % 100 == 0:
             time_history.append(n * dt)
