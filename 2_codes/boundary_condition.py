@@ -201,11 +201,11 @@ class HeatTransferCalculator:
             emissivity (float, optional): 发射率，默认为0.8
 
         返回:
-            float: 热流密度(kW/m²)，当表面温度<=环境温度时返回0
+            float: 热流密度(W/m²)，当表面温度<=环境温度时返回0
         """
         if T_s <= T_a:
             return 0
-        q = 5.67e-8 * emissivity * ((T_s + 273) ** 4 - (T_a + 273) ** 4) / 1000
+        q = 5.67e-8 * emissivity * ((T_s + 273) ** 4 - (T_a + 273) ** 4)
         return max(q, 0)
 
     def plot_mold_heat_flux(self, t_max, a, b):

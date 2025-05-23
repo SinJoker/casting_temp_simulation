@@ -81,10 +81,6 @@ def solve_transient_heat_conduction(
     time_history = []
     temp_history = []
 
-    # print(f"开始模拟，总时间步数: {n_steps}，总时间: {total_time}s")
-    # print(f"初始温度场: {initial_temp}℃")
-    # print(f"环境温度: 顶部={T_inf_top}℃，右侧={T_inf_right}℃")
-
     for n in range(n_steps):
         T_old = T.copy()
 
@@ -129,36 +125,36 @@ def solve_transient_heat_conduction(
         # 顶部边界
         j = ny - 1
         if boundary_type == 3:
-            # 第三类边界条件(对流+辐射) - 非稳态形式
-            # 公式推导过程:
-            # 1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) - h(T-T_inf) - q_rad
-            # 2. 离散化处理:
-            #    a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
-            #    b. x方向二阶导数: (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dx²
-            #    c. y方向导数(边界单向差分): (T_old[i,j-1] - T_old[i,j])/dy²
-            #    d. 对流项: h(T_old[i,j] - T_inf)
-            #    e. 辐射项: q_rad = σε(T_old[i,j]^4 - T_inf^4)
-            # 3. 离散平衡方程:
-            #    ρcp(T_new[i,j] - T_old[i,j])/Δt*dx*dy =
-            #      k[(T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dx*dy
-            #      + k(T_old[i,j-1] - T_old[i,j])/dy*dx
-            #      - [h(T_old[i,j] - T_inf) + q_rad]*dx
-            # 4. 显式离散方程:
-            #    T_new[i,j] = T_old[i,j] + αΔt[(T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dx²
-            #                  + (T_old[i,j-1] - T_old[i,j])/dy²
-            #                  - (h(T_old[i,j] - T_inf) + q_rad)/(k *dy)]
-            # 2025年5月22日18:31:49
+            """
+            第三类边界条件(对流+辐射) - 非稳态形式
+            公式推导过程:
+            1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) - h(T-T_inf) - q_rad
+            2. 离散化处理:
+               a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
+               b. x方向二阶导数: (T_old[i+1,j] - 2T_old[i,j] + T_old[i-1,j])/dx²
+               c. y方向导数(边界单向差分): (T_old[i,j-1] - T_old[i,j])/dy²
+               d. 对流项: h(T_old[i,j] - T_inf)
+               e. 辐射项: q_rad = σε(T_old[i,j]^4 - T_inf^4)
+            3. 离散平衡方程:
+               ρcp(T_new[i,j] - T_old[i,j])/Δt*dx*dy =
+                 k[(T_old[i+1,j] - 2T_old[i,j] + T_old[i-1,j])/dx*dy
+                 + k(T_old[i,j-1] - T_old[i,j])/dy*dx
+                 - [h(T_old[i,j] - T_inf) + q_rad]*dx
+            4. 显式离散方程:
+               T_new[i,j] = T_old[i,j] + αΔt[
+                             (T_old[i+1,j] - 2T_old[i,j] + T_old[i-1,j])/dx²
+                             + (T_old[i,j-1] - T_old[i,j])/dy²
+                             - (h(T_old[i,j] - T_inf) + q_rad)/(k *dy)
+                             ]
+            """
             from boundary_condition import HeatTransferCalculator
 
             calculator = HeatTransferCalculator()
-            for i in range(1, nx - 1):
+            for i in range(1, nx - 2):
                 k = get_conductivity(T[j, i])
                 # 计算辐射热流密度(W/m²)
-                q_rad = (
-                    calculator.air_cooling_heat_flux(
-                        T_s=T_old[j, i], T_a=T_inf_top, emissivity=sigma
-                    )
-                    * 1000
+                q_rad = calculator.air_cooling_heat_flux(
+                    T_s=T_old[i, j], T_a=T_inf_top, emissivity=sigma
                 )
                 # 总热流 = 对流 + 辐射 (W/m²)
                 q_total = h_top * (T_old[j, i] - T_inf_top) + q_rad
@@ -167,28 +163,33 @@ def solve_transient_heat_conduction(
                 cp = get_specific_heat(T_old[i, j])
                 alpha = k / (rho * cp)
                 T[i, j] = T_old[i, j] + alpha * dt * (
-                    (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1]) / dx**2
+                    (T_old[i + 1, j] - 2 * T_old[i, j] + T_old[i - 1, j]) / dx**2
                     + (T_old[i, j - 1] - T_old[i, j]) / dy**2
-                    - (h_top * (T_old[i, j] - T_inf_top) + q_rad) / (k * dy)
+                    - q_total / (k * dy)
                 )
-                ## 20250522 下班，处理到这里
         else:
-            # 第二类边界条件(给定热流密度) - 非稳态形式
-            # 公式推导过程:
-            # 1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂T/∂y) - q_top
-            # 2. 离散化处理:
-            #    a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
-            #    b. x方向二阶导数: (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dx²
-            #    c. y方向一阶导数: (T_old[i,j] - T_old[i,j-1])/dy²
-            # 3. 显式离散方程:
-            #    T_new[i,j] = T_old[i,j] + αΔt[(T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dx²
-            #                  + (T_old[i,j] - T_old[i,j-1])/dy² - q_top/(ρcp dy)]
-            # 3. 离散方程:
-            #    T[j,i] = T_old[j,i] + (αΔt)[(T_old[j,i+1] - 2T_old[j,i] + T_old[j,i-1])/dx²
-            #              + (T_old[j,i] - T_old[j-1,i])/dy² + q_top/(k dy)]
+            """
+            第二类边界条件(给定热流密度) - 非稳态形式
+            公式推导过程:
+            1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂T/∂y) - q_top
+            2. 离散化处理:
+               a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
+               b. x方向二阶导数: (T_old[i+1,j] - 2T_old[i,j] + T_old[i-1,j])/dx²
+               c. y方向一阶导数: (T_old[i,j-1]-T_old[i,j])/dy²
+            3. 离散平衡方程:
+               ρcp(T_new[i,j]-T_old[i,j])/Δt*dx*dy = k[(T_old[i+1,j] - 2T_old[i,j] + T_old[i-1,j])/dx*dy
+                             + (T_old[i,j-1] - T_old[i,j])/dy*dx
+                             - q_top/k*dx]
+            3. 离散方程：
+               T_new[i,j] = T_old[i,j] + αΔt[
+                             (T_old[i+1,j] - 2T_old[i,j] + T_old[i-1,j])/dx²
+                             + (T_old[i,j-1] - T_old[i,j])/dy²
+                             - q_top/(k*dy)
+               ]
 
-            # 更新边界节点温度(非稳态形式)
-            for i in range(1, nx - 1):
+            更新边界节点温度(非稳态形式)
+            """
+            for i in range(1, nx - 2):
                 k = get_conductivity(T_old[j, i])  # 使用上一时间步的温度计算导热系数
                 rho = get_density(T_old[j, i])
                 cp = get_specific_heat(T_old[j, i])
@@ -196,103 +197,125 @@ def solve_transient_heat_conduction(
 
                 # 非稳态边界条件离散方程
                 T[i, j] = T_old[i, j] + alpha * dt * (
-                    (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1])
+                    (T_old[i + 1, j] - 2 * T_old[i, j] + T_old[i - 1, j])
                     / dx**2  # x方向
-                    + (T_old[i, j] - T_old[i, j - 1]) / dy**2  # y方向
-                    - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
-                    / (rho * cp * dy)  # 热流密度项
-                    + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
+                    + (T_old[i, j - 1] - T_old[i, j]) / dy**2  # y方向
+                    - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
                     / (k * dy)  # 计算当前时间的热流密度并转换为W/m²
                 )
 
         # 右侧边界
         i = nx - 1
         if boundary_type == 3:
-            # 第三类边界条件 - 同时考虑对流和辐射
-            # 公式推导过程:
-            # 1. 能量平衡: 导热进入节点的热量 = 对流+辐射带走的热量
-            #    -k*(T[i,j]-T[i-1,j])/dx = h*(T[i,j]-T_inf) + q_rad
-            # 2. 离散化处理:
-            #    a. x方向导数: (T_old[i-1,j] - T_old[i,j])/dx
-            #    b. 对流项: h*(T_old[i,j] - T_inf)
-            #    c. 辐射项: q_rad = σε(T_old[i,j]^4 - T_inf^4)
-            # 3. 整理得到:
-            #    k*T_old[i-1,j]/dx = (k/dx + h)*T_new[i,j] - h*T_inf - q_rad
-            # 4. 解出T_new[i,j]:
-            #    T_new[i,j] = (k*T_old[i-1,j] + (h*T_inf + q_rad)*dx) / (k + h*dx)
-            for j in range(1, ny - 1):
+            """
+            第三类边界条件(对流+辐射) - 非稳态形式
+            公式推导过程:
+            1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) - h(T-T_inf) - q_rad
+            2. 离散化处理:
+               a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
+               b. x方向导数(边界单向差分): (T_old[i-1,j] - T_old[i,j])/dx²
+               c. y方向二阶导数: (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dy²
+               d. 对流项: h(T_old[i,j] - T_inf)
+               e. 辐射项: q_rad = σε(T_old[i,j]^4 - T_inf^4)
+            3. 离散平衡方程:
+               ρcp(T_new[i,j] - T_old[i,j])/Δt*dx*dy =
+                 k[(T_old[i-1,j] - T_old[i,j])/dx*dy
+                 + k(T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dy*dx
+                 - [h(T_old[i,j] - T_inf) + q_rad]*dy
+            4. 显式离散方程:
+               T_new[i,j] = T_old[i,j] + αΔt[
+                             (T_old[i-1,j] - T_old[i,j])/dx²
+                             + (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dy²
+                             - (h(T_old[i,j] - T_inf) + q_rad)/(k *dx)
+                             ]
+            """
+            for j in range(1, ny - 2):
                 k = get_conductivity(T[i, j])
                 # 计算辐射热流密度(W/m²)
-                q_rad = (
-                    calculator.air_cooling_heat_flux(
-                        T_s=T_old[i, j], T_a=T_inf_right, emissivity=sigma
-                    )
-                    * 1000
+                q_rad = calculator.air_cooling_heat_flux(
+                    T_s=T_old[i, j], T_a=T_inf_right, emissivity=sigma
                 )
                 # 总热流 = 对流 + 辐射 (W/m²)
                 q_total = h_right * (T_old[i, j] - T_inf_right) + q_rad
-                # 边界节点温度计算公式
-                T[i, j] = (k * T[i - 1, j] + q_total * dx) / (k + h_right * dx)
+                # 边界节点温度计算公式(考虑三个方向导热)
+                rho = get_density(T_old[i, j])
+                cp = get_specific_heat(T_old[i, j])
+                alpha = k / (rho * cp)
+                T[i, j] = T_old[i, j] + alpha * dt * (
+                    (T_old[i - 1, j] - T_old[i, j]) / dx**2
+                    + (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1]) / dy**2
+                    - q_total / (k * dx)
+                )
         else:
-            # 第二类边界条件 - 非稳态形式
-            # 公式推导过程:
-            # 1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) + q_right
-            # 2. 离散化处理:
-            #    a. 时间导数: (T_new - T_old)/Δt
-            #    b. x方向一阶导数: (T[j,i] - T[j,i-1])/dx
-            #    c. y方向二阶导数: (T[j+1,i] - 2T[j,i] + T[j-1,i])/dy²
-            # 3. 离散方程:
-            #    T[j,i] = T_old[j,i] + (αΔt)[(T_old[j,i] - T_old[j,i-1])/dx²
-            #              + (T_old[j+1,i] - 2T_old[j,i] + T_old[j-1,i])/dy²
-            #              + q_right/(k dx)]  # 直接使用输入的热流密度
-
-            for j in range(1, ny - 1):
-                k = get_conductivity(T_old[j, i])  # 使用上一时间步的温度计算导热系数
-                rho = get_density(T_old[j, i])
-                cp = get_specific_heat(T_old[j, i])
+            """
+            第二类边界条件(给定热流密度) - 非稳态形式
+            公式推导过程:
+            1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) + q_right
+            2. 离散化处理:
+               a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
+               b. x方向导数(边界单向差分): (T_old[i-1,j] - T_old[i,j])/dx²
+               c. y方向二阶导数: (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dy²
+            3. 离散平衡方程:
+               ρcp(T_new[i,j]-T_old[i,j])/Δt*dx*dy = k[(T_old[i-1,j] - T_old[i,j])/dx*dy
+                             + (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dy*dx
+                             + q_right/k*dy]
+            4. 离散方程：
+               T_new[i,j] = T_old[i,j] + αΔt[
+                             (T_old[i-1,j] - T_old[i,j])/dx²
+                             + (T_old[i,j+1] - 2T_old[i,j] + T_old[i,j-1])/dy²
+                             + q_right/(k*dx)
+               ]
+            """
+            for j in range(1, ny - 2):
+                k = get_conductivity(T_old[i, j])  # 使用上一时间步的温度计算导热系数
+                rho = get_density(T_old[i, j])
+                cp = get_specific_heat(T_old[i, j])
                 alpha = k / (rho * cp)  # 热扩散系数
 
                 # 非稳态边界条件离散方程
-                T[j, i] = T_old[j, i] + alpha * dt * (
-                    (T_old[j, i] - T_old[j, i - 1]) / dx**2  # x方向
-                    + (T_old[j + 1, i] - 2 * T_old[j, i] + T_old[j - 1, i])
+                T[i, j] = T_old[i, j] + alpha * dt * (
+                    (T_old[i - 1, j] - T_old[i, j]) / dx**2  # x方向
+                    + (T_old[i, j + 1] - 2 * T_old[i, j] + T_old[i, j - 1])
                     / dy**2  # y方向
-                    + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
-                    / (k * dx)  # 计算当前时间的热流密度并转换为W/m²
+                    + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
+                    / (k * dx)  # 热流密度项
                 )
 
         # 角点处理
+        i, j = nx - 1, ny - 1
         k = get_conductivity(T[ny - 1, nx - 1])
         if boundary_type == 3:
-            # 角点处理 - 同时考虑对流和辐射
-            # 公式推导过程:
-            # 1. 能量平衡: 从两个方向进入节点的导热 = 两个方向的对流+辐射
-            #    k*(T[j,i-1]-T[j,i])/dx + k*(T[j-1,i]-T[j,i])/dy =
-            #      (h_top*(T[j,i]-T_inf_top) + q_rad_top)*dy +
-            #      (h_right*(T[j,i]-T_inf_right) + q_rad_right)*dx
-            # 2. 整理得到:
-            #    k*(T[j,i-1]/dx + T[j-1,i]/dy) =
-            #      T[j,i]*(k/dx + k/dy + h_top*dy + h_right*dx) -
-            #      (h_top*T_inf_top*dy + h_right*T_inf_right*dx +
-            #       q_rad_top*dy + q_rad_right*dx)
-            # 3. 解出T[j,i]:
-            #    T[j,i] = [k*(T[j,i-1] + T[j-1,i]) +
-            #             (q_total_top*dy + q_total_right*dx)] /
-            #            (2k + h_top*dy + h_right*dx)
-
+            """
+            第三类边界条件(对流+辐射) - 角点非稳态形式
+            公式推导过程:
+            1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) - h_top(T-T_inf_top) - q_rad_top - h_right(T-T_inf_right) - q_rad_right
+            2. 离散化处理:
+               a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
+               b. x方向导数(边界单向差分): (T_old[i-1,j] - T_old[i,j])/dx²
+               c. y方向导数(边界单向差分): (T_old[i,j-1] - T_old[i,j])/dy²
+               d. 对流项: h_top*(T_old[i,j] - T_inf_top) + h_right*(T_old[i,j] - T_inf_right)
+               e. 辐射项: q_rad_top + q_rad_right = σε(T_old[i,j]^4 - T_inf_top^4) + σε(T_old[i,j]^4 - T_inf_right^4)
+            3. 离散平衡方程:
+               ρcp(T_new[i,j] - T_old[i,j])/Δt*dx*dy =
+                 k[(T_old[i-1,j] - T_old[i,j])/dx*dy
+                 + k[(T_old[i,j-1] - T_old[i,j])/dy*dx
+                 - [h_top*(T_old[i,j] - T_inf_top) + q_rad_top]*dx
+                 - [h_right*(T_old[i,j] - T_inf_right) + q_rad_right]*dy
+            4. 显式离散方程:
+               T_new[i,j] = T_old[i,j] + αΔt[
+                             (T_old[i-1,j] - T_old[i,j])/dx²
+                             + (T_old[i,j-1] - T_old[i,j])/dy²
+                             - (h_top*(T_old[i,j] - T_inf_top) + q_rad_top)/(k*dy)
+                             - (h_right*(T_old[i,j] - T_inf_right) + q_rad_right)/(k*dx)
+                             ]
+            """
             # 计算顶部辐射热流(W/m²)
-            q_rad_top = (
-                calculator.air_cooling_heat_flux(
-                    T_s=T_old[ny - 1, nx - 1], T_a=T_inf_top, emissivity=sigma
-                )
-                * 1000
+            q_rad_top = calculator.air_cooling_heat_flux(
+                T_s=T_old[ny - 1, nx - 1], T_a=T_inf_top, emissivity=sigma
             )
             # 计算右侧辐射热流(W/m²)
-            q_rad_right = (
-                calculator.air_cooling_heat_flux(
-                    T_s=T_old[ny - 1, nx - 1], T_a=T_inf_right, emissivity=sigma
-                )
-                * 1000
+            q_rad_right = calculator.air_cooling_heat_flux(
+                T_s=T_old[ny - 1, nx - 1], T_a=T_inf_right, emissivity=sigma
             )
             # 总热流 = 对流 + 辐射 (W/m²)
             q_total_top = h_top * (T_old[ny - 1, nx - 1] - T_inf_top) + q_rad_top
@@ -307,30 +330,38 @@ def solve_transient_heat_conduction(
                 + q_total_right * dx
             ) / (2 * k + h_top * dy + h_right * dx)
         else:
-            # 非稳态角点条件离散方程
-            # 公式推导过程:
-            # 1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) + q_top + q_right
-            # 2. 离散化处理:
-            #    a. 时间导数: (T_new - T_old)/Δt
-            #    b. x方向一阶导数: (T[j,i] - T[j,i-1])/dx
-            #    c. y方向一阶导数: (T[j,i] - T[j-1,i])/dy
-            # 3. 离散方程:
-            #    T[j,i] = T_old[j,i] + (αΔt)[(T_old[j,i] - T_old[j,i-1])/dx²
-            #              + (T_old[j,i] - T_old[j-1,i])/dy²
-            #              + q_top/(k dy) + q_right/(k dx)]  # 直接使用输入的热流密度
+            """
+            第二类边界条件(给定热流密度) - 角点非稳态形式
+            公式推导过程:
+            1. 能量平衡: ρcp(∂T/∂t) = k(∂²T/∂x²) + k(∂²T/∂y²) + q_top + q_right
+            2. 离散化处理:
+               a. 时间导数: (T_new[i,j] - T_old[i,j])/Δt
+               b. x方向导数(边界单向差分): (T_old[i-1,j] - T_old[i,j])/dx²
+               c. y方向导数(边界单向差分): (T_old[i,j-1] - T_old[i,j])/dy²
+            3. 离散平衡方程:
+               ρcp(T_new[i,j]-T_old[i,j])/Δt*dx*dy = k[(T_old[i-1,j] - T_old[i,j])/dx*dy
+                             + (T_old[i,j-1] - T_old[i,j])/dy*dx
+                             - q_top/k*dy - q_right/k*dx]
+            4. 离散方程：
+               T_new[i,j] = T_old[i,j] + αΔt[
+                             (T_old[i-1,j] - T_old[i,j])/dx²
+                             + (T_old[i,j-1] - T_old[i,j])/dy²
+                             - q_top/(k*dy) - q_right/(k*dx)
+               ]
+            """
             k = get_conductivity(
-                T_old[ny - 1, nx - 1]
+                T_old[nx - 1, ny - 1]
             )  # 使用上一时间步的温度计算导热系数
-            rho = get_density(T_old[ny - 1, nx - 1])
-            cp = get_specific_heat(T_old[ny - 1, nx - 1])
+            rho = get_density(T_old[nx - 1, ny - 1])
+            cp = get_specific_heat(T_old[nx - 1, ny - 1])
             alpha = k / (rho * cp)  # 热扩散系数
 
-            T[ny - 1, nx - 1] = T_old[ny - 1, nx - 1] + alpha * dt * (
-                (T_old[ny - 1, nx - 1] - T_old[ny - 1, nx - 2]) / dx**2  # x方向
-                + (T_old[ny - 1, nx - 1] - T_old[ny - 2, nx - 1]) / dy**2  # y方向
-                + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
+            T[nx - 1, ny - 1] = T_old[nx - 1, ny - 1] + alpha * dt * (
+                (T_old[nx - 1, ny - 2] - T_old[nx - 1, ny - 1]) / dx**2  # x方向
+                + (T_old[nx - 1, ny - 2] - T_old[nx - 1, ny - 1]) / dy**2  # y方向
+                - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
                 / (k * dy)  # 计算当前时间的热流密度并转换为W/m²
-                + (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B) * 1000)
+                - (calculator.mold_heat_flux(n * dt, A=q_k_A, B=q_k_B))
                 / (k * dx)  # 计算当前时间的热流密度并转换为W/m²
             )
 
