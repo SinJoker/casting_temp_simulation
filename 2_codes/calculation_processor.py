@@ -1,15 +1,38 @@
+"""
+calculation_processor.py
+
+该模块负责处理温度场计算的主要逻辑，包括读取初始化参数、调用热传导求解器以及保存计算结果。
+主要功能包括：
+1. 读取 `initialize.json` 文件中的全局参数和分段参数。
+2. 根据分段参数调用不同的热传导求解器（标准方法或相变基方法）。
+3. 保存每段计算的结果到 CSV 文件，并将最后一段的温度场用于下一段的初始条件。
+
+作者：孙俊博
+日期：2025-05-28
+"""
+
 import json
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
 from Iterator import (
     solve_transient_heat_conduction,
     solve_transient_heat_conduction_with_phase_properties,
 )
-from pathlib import Path
-import numpy as np
 
 
 def process_segments():
-    # 读取initialize.json
+    """
+    处理温度场计算的分段逻辑。
+
+    该函数读取 `initialize.json` 文件中的全局参数和分段参数，逐段调用热传导求解器，
+    并保存每段的计算结果到 CSV 文件。最后一段的温度场将作为下一段的初始条件。
+
+    返回:
+        list: 包含每段计算结果的列表，每个结果是一个字典，包含最终温度场和输出路径。
+    """
+    # 读取 initialize.json 文件
     with open("results/initialize.json", "r") as f:
         data = json.load(f)
 
@@ -18,7 +41,7 @@ def process_segments():
     results = []
 
     for i, segment in enumerate(segments):
-        # 直接使用global_params中的参数
+        # 构建当前段的参数
         params = {
             "Lx": global_params["Lx"],
             "Ly": global_params["Ly"],
@@ -33,15 +56,15 @@ def process_segments():
             "property_method": global_params.get(
                 "property_method", "phase_based"
             ),  # standard 或 phase_based
-            "Ts": global_params.get("Ts", 1450),  # 固相线温度 [K]
-            "Tl": global_params.get("Tl", 1520),  # 液相线温度 [K]
+            "Ts": global_params.get("Ts", 1450),  # 固相线温度 [℃]
+            "Tl": global_params.get("Tl", 1520),  # 液相线温度 [℃]
             "props": global_params.get("props", {}),  # 钢种热物性字典
         }
         total_time1 = segment["time"]
         print(total_time1)
         print(f"Processing segment {i+1}/{len(segments)}")
 
-        # 第一段使用initial_temp_field，后续使用前一段的结果
+        # 设置初始温度场
         if i == 0:
             initial_temp = np.array(segment["initial_temp_field"])
             if initial_temp.ndim != 2:
@@ -51,8 +74,9 @@ def process_segments():
             if not isinstance(initial_temp, np.ndarray):
                 raise ValueError("初始温度场必须是numpy数组")
 
-        # 调用计算函数
+        # 根据 property_method 调用不同的求解器
         if params["property_method"] == "phase_based":
+            # 调用相变基方法的热传导求解器
             X, Y, T_final, time_history, temp_history = (
                 solve_transient_heat_conduction_with_phase_properties(
                     Lx=params["Lx"],
@@ -73,6 +97,7 @@ def process_segments():
                 )
             )
         else:
+            # 调用标准方法的热传导求解器
             X, Y, T_final, time_history, temp_history = solve_transient_heat_conduction(
                 Lx=params["Lx"],
                 Ly=params["Ly"],
@@ -88,7 +113,7 @@ def process_segments():
                 tol=params["tol"],
             )
 
-        # 保存结果到CSV
+        # 保存结果到CSV文件
         output_path = Path(f"2_codes/results/segment_{i+1}_results.csv")
         pd.DataFrame(temp_history).to_csv(output_path, index=False)
 
