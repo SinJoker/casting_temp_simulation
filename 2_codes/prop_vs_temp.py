@@ -1,5 +1,7 @@
 """钢的热物性计算函数"""
 
+import numpy as np
+
 
 def get_conductivity(T):
 
@@ -21,13 +23,18 @@ def get_specific_heat(T):
     - 固相(<1450℃): 658.811
     - 两相区(1450-1500℃): 650
     - 液相(>=1500℃): 691.667
+
+    支持标量和numpy数组输入
     """
-    if T < 1450:
-        return 658.811
-    elif 1450 <= T < 1500:
-        return 650
+    if isinstance(T, (int, float)):
+        if T < 1450:
+            return 658.811
+        elif 1450 <= T < 1500:
+            return 650
+        else:
+            return 691.667
     else:
-        return 691.667
+        return np.where(T < 1450, 658.811, np.where(T < 1500, 650, 691.667))
 
 
 def get_phase(T: float, Ts: float, Tl: float) -> str:

@@ -183,17 +183,29 @@ class HeatTransferCalculator:
         计算空冷区热流密度。
 
         参数:
-            T_s (float): 表面温度(℃)
-            T_a (float): 环境温度(℃)
+            T_s (float或numpy.ndarray): 表面温度(℃)
+            T_a (float或numpy.ndarray): 环境温度(℃)
             emissivity (float, optional): 发射率，默认为0.8
 
         返回:
-            float: 热流密度(W/m²)，当表面温度<=环境温度时返回0
+            float或numpy.ndarray: 热流密度(W/m²)，当表面温度<=环境温度时返回0
         """
-        if T_s <= T_a:
-            return 0
-        q = 5.67e-8 * emissivity * ((T_s + 273) ** 4 - (T_a + 273) ** 4)
-        return max(q, 0)
+        import numpy as np
+
+        if isinstance(T_s, np.ndarray) or isinstance(T_a, np.ndarray):
+            # 处理数组输入
+            T_s = np.asarray(T_s)
+            T_a = np.asarray(T_a)
+            q = np.zeros_like(T_s)
+            mask = T_s > T_a
+            q[mask] = 5.67e-8 * emissivity * ((T_s[mask] + 273) ** 4 - (T_a + 273) ** 4)
+            return q
+        else:
+            # 处理标量输入
+            if T_s <= T_a:
+                return 0
+            q = 5.67e-8 * emissivity * ((T_s + 273) ** 4 - (T_a + 273) ** 4)
+            return q
 
     def plot_mold_heat_flux(self, t_max, a, b):
         """
