@@ -1071,7 +1071,7 @@ with tab3:
                 for i, result in enumerate(results):
                     st.write(f"第{i+1}段结果保存至: {result['output_path']}")
             except Exception as e:
-                st.error(f"计算出错: {str(e)}")
+                print(f"计算出错: {str(e)}")
     # with tab3_col2:
     #     st.subheader("计算结果")
     #     # 预留热图显示区域

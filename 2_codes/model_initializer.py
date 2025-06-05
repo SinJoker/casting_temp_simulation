@@ -1,7 +1,8 @@
 import json
 import os
+from typing import Any, Dict
+
 import numpy as np
-from typing import Dict, Any
 
 
 class ModelInitializer:
@@ -122,7 +123,7 @@ class ModelInitializer:
         casting_temperature = self.process_data["mold_parameters"][
             "casting_temperature"
         ]
-        initial_temp_field = np.full((nx, ny), casting_temperature)
+        initial_temp_field = casting_temperature
 
         # 设置不同区域的初始温度
         # 结晶器区域: 全部为液相线温度
@@ -145,7 +146,7 @@ class ModelInitializer:
                 "T_inf_top": 0.0,
                 "T_inf_right": 0.0,
                 "sigma": 0.0,
-                "initial_temp_field": initial_temp_field.tolist(),
+                "initial_temp_field": initial_temp_field,
                 "time": (mold["mold_length"]) / casting_speed_mps,
             }
         )

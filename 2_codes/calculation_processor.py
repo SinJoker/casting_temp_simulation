@@ -33,7 +33,7 @@ def process_segments():
         list: 包含每段计算结果的列表，每个结果是一个字典，包含最终温度场和输出路径。
     """
     # 读取 initialize.json 文件
-    with open("results/initialize.json", "r") as f:
+    with open("2_codes/results/initialize.json", "r") as f:
         data = json.load(f)
 
     global_params = data["global_parameters"]
@@ -61,18 +61,23 @@ def process_segments():
             "props": global_params.get("props", {}),  # 钢种热物性字典
         }
         total_time1 = segment["time"]
+        print(params)
         print(total_time1)
         print(f"Processing segment {i+1}/{len(segments)}")
 
         # 设置初始温度场
         if i == 0:
-            initial_temp = np.array(segment["initial_temp_field"])
-            if initial_temp.ndim != 2:
-                raise ValueError("初始温度场必须是二维数组")
+            # 根据nx和ny创建初始温度场二维数组
+            nx = global_params["nx"]
+            ny = global_params["ny"]
+            print(nx, ny)
+            initial_temp = np.full((nx, ny), segment["initial_temp_field"], dtype=float)
         else:
             initial_temp = results[-1]["final_temp"]
             if not isinstance(initial_temp, np.ndarray):
                 raise ValueError("初始温度场必须是numpy数组")
+
+        print("Initial temperature field shape:", initial_temp.shape)
 
         # 根据 property_method 调用不同的求解器
         if params["property_method"] == "phase_based":
@@ -112,6 +117,7 @@ def process_segments():
                 sigma=params["sigma"],
                 tol=params["tol"],
             )
+        print(f"Segment {i+1} completed.")
 
         # 保存结果到CSV文件
         output_path = Path(f"2_codes/results/segment_{i+1}_results.csv")
@@ -126,3 +132,13 @@ def process_segments():
         )
 
     return results
+
+
+if __name__ == "__main__":
+    try:
+        results = process_segments()
+        print(f"计算完成！共处理了{len(results)}段数据")
+        for i, result in enumerate(results):
+            print(f"第{i+1}段结果保存至: {result['output_path']}")
+    except Exception as e:
+        print(f"计算出错: {str(e)}")

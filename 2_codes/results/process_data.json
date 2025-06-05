@@ -3,8 +3,8 @@
         "casting_temperature": 1550.0,
         "casting_speed": 1.2,
         "heat_flow_factor": 1.0,
-        "slab_width": 0.8,
-        "slab_thickness": 0.12,
+        "slab_width": 1.0,
+        "slab_thickness": 0.2,
         "liquid_steel_height": 0.5,
         "mold_length": 1.0,
         "heat_flux_a": 2680000.0,
@@ -43,24 +43,24 @@
         "cooling_formula": "Mitsutsuka",
         "heat_transfer_coefficients": [
             {
-                "top": 737.1535,
-                "side": 2781.5961
+                "top": 630.552,
+                "side": 1945.3598
             },
             {
-                "top": 737.1535,
-                "side": 2781.5961
+                "top": 630.552,
+                "side": 1945.3598
             },
             {
-                "top": 737.1535,
-                "side": 2781.5961
+                "top": 630.552,
+                "side": 1945.3598
             },
             {
-                "top": 737.1535,
-                "side": 2781.5961
+                "top": 630.552,
+                "side": 1945.3598
             },
             {
-                "top": 737.1535,
-                "side": 2781.5961
+                "top": 630.552,
+                "side": 1945.3598
             }
         ]
     },
