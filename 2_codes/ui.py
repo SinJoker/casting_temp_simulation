@@ -1,32 +1,29 @@
 # 必须在最前面调用set_page_config
 import streamlit as st
-from sympy import symbols, sympify, latex
+from sympy import latex, symbols, sympify
 
 # 定义公式中可能用到的符号变量
 V, T_w, h, T, T_s, T_l, T_m, q, k, rho, c_p = symbols(
     "V T_w h T T_s T_l T_m q k rho c_p"
 )
-import pandas as pd
 import json
 import os
+from pathlib import Path
+
+# 绘制物性参数图表(使用plotly)
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from boundary_condition import HeatTransferCalculator
+from convergence_detection import convergence_detection
+from model_initializer import initialize_model
+from plotly.subplots import make_subplots
+from prop_vs_temp import cp_cal, lamda_cal, rho_cal
 from thermal_properties import (
     calculate_const_properties,
     calculate_liquidus_temp,
     calculate_solidus_temp,
 )
-from model_initializer import initialize_model
-from prop_vs_temp import (
-    cp_cal,
-    lamda_cal,
-    rho_cal,
-)
-
-from boundary_condition import HeatTransferCalculator
-
-# 绘制物性参数图表(使用plotly)
-import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 st.set_page_config(layout="wide")
 
@@ -1031,6 +1028,7 @@ with tab3:
 
     with tab3_col1:
         st.subheader("计算设置")
+        time_step = st.number_input("时间步长 (s)", min_value=0.1, value=0.1, step=0.1)
         mesh_size = (
             st.number_input(
                 "空间步长 (mm)",
@@ -1041,8 +1039,8 @@ with tab3:
             )
             / 1000
         )
-        time_step = st.number_input("时间步长 (s)", min_value=0.1, value=1.0, step=0.1)
-        if st.button("模型建立及初始化", key="init", use_container_width=True):
+
+        if st.button("计算模型建立及初始化", key="init", use_container_width=True):
             progress_bar = st.progress(0)
             status_text = st.empty()
 
@@ -1061,6 +1059,19 @@ with tab3:
             except Exception as e:
                 progress_bar.empty()
                 st.error(f"模型初始化失败: {str(e)}")
+        if st.button("收敛性检测", key="conv_detection", use_container_width=True):
+            # json读取initialize.json中的字段，获取initial_temp, dt, dx, dy
+            json_path = Path(__file__).parent.parent / "results" / "initialize.json"
+            with open(json_path, "r") as f:
+                data = json.load(f)
+                initial_temp, dt, dx, dy = (
+                    data["segments"][0]["initial_temp_field"],
+                    data["global_parameters"]["dt"],
+                    data["global_parameters"]["Lx"] / data["global_parameters"]["nx"],
+                    data["global_parameters"]["Ly"] / data["global_parameters"]["ny"],
+                )
+                conv_results = convergence_detection(initial_temp, dt, dx, dy)
+                st.write(conv_results)
         if st.button("开始计算", key="calc", use_container_width=True, type="primary"):
             try:
                 from calculation_processor import process_segments
