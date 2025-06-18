@@ -1,0 +1,192 @@
+\documentclass[UTF8]{ctexart}
+\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\usepackage{lmodern}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{blkarray}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usetikzlibrary{matrix, positioning}
+\usepackage{hyperref}
+
+\title{二维热传导方程离散的显式五对角矩阵结构}
+\author{数值传热学分析}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{引言}
+本文展示二维热传导方程隐式离散格式如何直接导出五对角矩阵。考虑 $3 \times 3$ 网格系统（总自由度 $N=9$），通过行优先排序直接构造完整矩阵。
+
+\section{矩阵构造原理}
+
+\subsection{离散方程}
+中心节点 $(i,j)$ 的离散方程：
+$$
+\begin{split}
+- r_x T_{i-1,j} &- r_y T_{i,j-1} + (1 + 2r_x + 2r_y) T_{i,j} \\
+&- r_x T_{i+1,j} - r_y T_{i,j+1} = T_{i,j}^n
+\end{split}
+$$
+
+\subsection{行优先索引}
+网格点 $(i,j)$ 的一维索引：
+$$
+k(i,j) = i \times N_y + j \quad (N_y = 3)
+$$
+
+\begin{table}[h]
+\centering
+\caption{网格点 $(i,j)$ 到一维索引 $k$ 的映射}
+\label{tab:index_mapping}
+\begin{tabular}{c|c|c}
+$i$ & $j$ & $k$ \\ \hline
+0 & 0 & 0 \\
+0 & 1 & 1 \\
+0 & 2 & 2 \\
+1 & 0 & 3 \\
+1 & 1 & 4 \\
+1 & 2 & 5 \\
+2 & 0 & 6 \\
+2 & 1 & 7 \\
+2 & 2 & 8 \\
+\end{tabular}
+\end{table}
+
+\section{完整五对角矩阵}
+矩阵元素 $A_{k,l}$ 表示行 $k$ 和列 $l$ 的耦合系数：
+
+$$
+A = \scalebox{0.85}{$
+\begin{blockarray}{ccccccccc}
+ & k=0 & k=1 & k=2 & k=3 & k=4 & k=5 & k=6 & k=7 & k=8 \\
+\begin{block}{c(ccccccccc)}
+k=0 & d  & -r_y & 0    & -r_x & 0    & 0    & 0    & 0    & 0    \\
+k=1 & -r_y & d  & -r_y & 0    & -r_x & 0    & 0    & 0    & 0    \\
+k=2 & 0    & -r_y & d  & 0    & 0    & -r_x & 0    & 0    & 0    \\
+k=3 & -r_x & 0    & 0    & d  & -r_y & 0    & -r_x & 0    & 0    \\
+k=4 & 0    & -r_x & 0    & -r_y & d  & -r_y & 0    & -r_x & 0    \\
+k=5 & 0    & 0    & -r_x & 0    & -r_y & d  & 0    & 0    & -r_x \\
+k=6 & 0    & 0    & 0    & -r_x & 0    & 0    & d  & -r_y & 0    \\
+k=7 & 0    & 0    & 0    & 0    & -r_x & 0    & -r_y & d  & -r_y \\
+k=8 & 0    & 0    & 0    & 0    & 0    & -r_x & 0    & -r_y & d  \\
+\end{block}
+\end{blockarray}
+$}
+$$
+其中 $d = 1 + 2r_x + 2r_y$。
+
+\section{矩阵结构可视化}
+\label{sec:matrix_visualization}
+
+\begin{tikzpicture}[
+    matrix of math nodes,
+    nodes in empty cells,
+    every node/.style={minimum size=1cm, anchor=center},
+    row 1/.style={nodes={draw=none}},
+    column 1/.style={nodes={draw=none}},
+    band/.style={fill=gray!30}
+]
+
+\matrix[
+    matrix of math nodes,
+    nodes={text width=1cm, text height=1cm, align=center},
+    row sep=-\pgflinewidth,
+    column sep=-\pgflinewidth,
+    nodes in empty cells
+] (M) {
+d & -r_y & 0 & -r_x & 0 & 0 & 0 & 0 & 0 \\
+-r_y & d & -r_y & 0 & -r_x & 0 & 0 & 0 & 0 \\
+0 & -r_y & d & 0 & 0 & -r_x & 0 & 0 & 0 \\
+-r_x & 0 & 0 & d & -r_y & 0 & -r_x & 0 & 0 \\
+0 & -r_x & 0 & -r_y & d & -r_y & 0 & -r_x & 0 \\
+0 & 0 & -r_x & 0 & -r_y & d & 0 & 0 & -r_x \\
+0 & 0 & 0 & -r_x & 0 & 0 & d & -r_y & 0 \\
+0 & 0 & 0 & 0 & -r_x & 0 & -r_y & d & -r_y \\
+0 & 0 & 0 & 0 & 0 & -r_x & 0 & -r_y & d \\
+};
+
+% 标记不同对角线
+\draw[red, very thick] (M-1-1) -- (M-9-9);
+\node[above=0.5cm of M-1-1, red] {主对角线 (d)};
+
+\draw[blue, very thick] (M-1-2) -- (M-8-9);
+\node[above=0.3cm of M-1-2, blue] {上对角线1 (-r_y)};
+
+\draw[green, very thick] (M-1-4) -- (M-6-9);
+\node[above=0.8cm of M-1-4, green] {上对角线Ny (-r_x)};
+
+\draw[orange, very thick] (M-2-1) -- (M-9-8);
+\node[below=0.5cm of M-9-8, orange] {下对角线1 (-r_y)};
+
+\draw[purple, very thick] (M-4-1) -- (M-9-6);
+\node[below=0.8cm of M-9-6, purple] {下对角线Ny (-r_x)};
+
+% 标记矩阵块
+\draw[thick, dashed] (M-3-3) -- (M-3-6);
+\draw[thick, dashed] (M-3-3) -- (M-6-3);
+\draw[thick, dashed] (M-3-6) -- (M-6-6);
+\draw[thick, dashed] (M-6-3) -- (M-6-6);
+
+\node[above=0.2cm of M-1-1] {行0};
+\node[above=0.2cm of M-1-4] {行1};
+\node[above=0.2cm of M-1-7] {行2};
+
+\node[left=0.2cm of M-1-1, rotate=90] {列0};
+\node[left=0.2cm of M-4-1, rotate=90] {列1};
+\node[left=0.2cm of M-7-1, rotate=90] {列2};
+
+\end{tikzpicture}
+
+\section{矩阵元素结构总结}
+\label{sec:matrix_structure}
+
+矩阵包含五条带：
+\begin{enumerate}
+\item 主对角线（红色）：所有 $A_{k,k} = d = 1 + 2r_x + 2r_y$
+\item 上对角线1（蓝色）：$A_{k,k+1} = -r_y$（行内右邻居）
+\item 下对角线1（橙色）：$A_{k,k-1} = -r_y$（行内左邻居）
+\item 上对角线Ny（绿色）：$A_{k,k+Ny} = -r_x$（下行同列邻居）
+\item 下对角线Ny（紫色）：$A_{k,k-Ny} = -r_x$（上行同列邻居）
+\end{enumerate}
+
+\section{边界条件处理}
+\label{sec:boundary_conditions}
+
+\subsection{边界缺失元素}
+对于边界点，缺失的元素结构：
+\begin{itemize}
+\item 左边界（$j=0$）：下对角线1元素缺失
+\item 右边界（$j=Ny-1$）：上对角线1元素缺失
+\item 上边界（$i=0$）：下对角线Ny元素缺失
+\item 下边界（$i=Nx-1$）：上对角线Ny元素缺失
+\end{itemize}
+
+\subsection{第二类边界条件}
+例如左边界（$i=0, j=0$）的Neumann条件：
+$$
+\begin{bmatrix}
+d' & -r_y & 0 & \cdots \\
+-r_y & d & \ddots & \\
+0 & \ddots & \ddots & \\
+\vdots & & & \\
+\end{bmatrix}
+$$
+其中 $d'$ 由边界热流确定。
+
+\section{结论}
+二维热传导方程隐式离散直接形成五对角矩阵：
+\begin{itemize}
+\item 五条对角线对应五个非零元素带
+\item 主对角线：自身系数 $1 + 2r_x + 2r_y$
+\item 偏移$\pm 1$：行内邻居耦合 $(-r_y)$
+\item 偏移$\pm N_y$：行间邻居耦合 $(-r_x)$
+\end{itemize}
+此结构揭示了热传导的局部耦合特性，为高效数值求解奠定基础。
+
+\end{document}

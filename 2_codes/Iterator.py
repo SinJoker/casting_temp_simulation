@@ -1,3 +1,4 @@
+from email import message
 import numpy as np
 from icecream import ic
 from prop_vs_temp import (
@@ -24,7 +25,7 @@ def solve_transient_heat_conduction(
     h_top=0.0,  # 顶部为第三类边界条件
     h_right=0.0,  # 右侧为第三类边界条件
     sigma=0.8,  # 辐射率 (第三类边界)
-    tol=1e-5,  # 使用全局定义的容差
+    tol=1e-7,  # 使用全局定义的容差
 ):
     """
     二维瞬态热传导问题求解（显式格式）
@@ -51,18 +52,6 @@ def solve_transient_heat_conduction(
     import numpy as np
     from boundary_condition import HeatTransferCalculator
 
-    # avg_temp = np.mean(initial_temp)
-    # k_init = get_conductivity(avg_temp)
-    # rho_init = get_density(avg_temp)
-    # cp_init = get_specific_heat(avg_temp)
-    # alpha_init = k_init / (rho_init * cp_init)
-    # Fo_x = alpha_init * dt / dx**2
-    # Fo_y = alpha_init * dt / dy**2
-    # if Fo_x > 0.5 or Fo_y > 0.5:
-    #     raise ValueError(
-    #         f"时间步长过大，需满足 Fourier数 <= 0.5 (当前 Fo_x={Fo_x:.2f}, Fo_y={Fo_y:.2f})"
-    #     )
-
     calculator = HeatTransferCalculator()
     # 从初始温度场获取网格尺寸
     if not isinstance(initial_temp, np.ndarray):
@@ -78,19 +67,6 @@ def solve_transient_heat_conduction(
     x = np.linspace(0, Lx, nx)
     y = np.linspace(0, Ly, ny)
     X, Y = np.meshgrid(x, y)
-
-    # 初始热扩散率检查（使用初始温度场的平均温度）
-    avg_temp = np.mean(initial_temp)
-    k_init = get_conductivity(avg_temp)
-    rho_init = get_density(avg_temp)
-    cp_init = get_specific_heat(avg_temp)
-    alpha_init = k_init / (rho_init * cp_init)
-    Fo_x = alpha_init * dt / dx**2
-    Fo_y = alpha_init * dt / dy**2
-    if Fo_x > 0.5 or Fo_y > 0.5:
-        raise ValueError(
-            f"时间步长过大，需满足 Fourier数 <= 0.5 (当前 Fo_x={Fo_x:.2f}, Fo_y={Fo_y:.2f})"
-        )
 
     # 初始化温度场
     T = initial_temp.copy()
@@ -307,7 +283,10 @@ def solve_transient_heat_conduction(
             else:
                 # 上边界-边
                 T[-1, 1:-1] = T_old_iter[-1, 1:-1] + (
-                    (-dx * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -dx
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     - k[-1, 1:-1] * (T[-1, 1:-1] - T[-1, 2:]) * dy / (2 * dx)
                     - k[-1, 1:-1] * (T[-1, 1:-1] - T[-1, 0:-2]) * dy / (2 * dx)
                     - k[-1, 1:-1] * (T[-1, 1:-1] - T[-2, 1:-1]) * dx / dy
@@ -315,7 +294,10 @@ def solve_transient_heat_conduction(
 
                 # 下边界-边
                 T[0, 1:-1] = T_old_iter[0, 1:-1] + (
-                    (-dx * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -dx
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     - (k[0, 1:-1] * (T[0, 1:-1] - T[0, 2:]) * dy / (2 * dx))
                     - (k[0, 1:-1] * (T[0, 1:-1] - T[0, 0:-2]) * dy / (2 * dx))
                     - (k[0, 1:-1] * (T[0, 1:-1] - T[1, 1:-1]) * dx / dy)
@@ -323,7 +305,10 @@ def solve_transient_heat_conduction(
 
                 # 左边界-边
                 T[1:-1, 0] = T_old_iter[1:-1, 0] + (
-                    (-dy * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -dy
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     - (k[1:-1, 0] * (T[1:-1, 0] - T[2:, 0]) * dx / (2 * dy))
                     - (k[1:-1, 0] * (T[1:-1, 0] - T[0:-2, 0]) * dx / (2 * dy))
                     - (k[1:-1, 0] * (T[1:-1, 0] - T[1:-1, 1]) * dy / dx)
@@ -331,7 +316,10 @@ def solve_transient_heat_conduction(
 
                 # 右边界-边
                 T[1:-1, -1] = T_old_iter[1:-1, -1] + (
-                    (-dy * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -dy
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     - (k[1:-1, -1] * (T[1:-1, -1] - T[2:, -1]) * dx / (2 * dy))
                     - (k[1:-1, -1] * (T[1:-1, -1] - T[0:-2, -1]) * dx / (2 * dy))
                     - (k[1:-1, -1] * (T[1:-1, -1] - T[1:-1, -2]) * dy / dx)
@@ -339,10 +327,15 @@ def solve_transient_heat_conduction(
 
                 # 左上边界-点
                 T[-1, 0] = T_old_iter[-1, 0] + (
-                    (-(0.5 * dy) * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -0.5
+                        * dy
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     + (
-                        -(0.5 * dx)
-                        * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B)
+                        -0.5
+                        * dx
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
                     )
                     - k[-1, 0] * (T[-1, 0] - T[-2, 0]) * dx / (2 * dy)
                     - k[-1, 0] * (T[-1, 0] - T[-1, 1]) * dy / (2 * dx)
@@ -350,26 +343,47 @@ def solve_transient_heat_conduction(
 
                 # 左下边界-点
                 T[0, 0] = T_old_iter[0, 0] + (
-                    (-0.5 * dy * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
-                    + (-0.5 * dx * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -0.5
+                        * dy
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
+                    + (
+                        -0.5
+                        * dx
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     - k[0, 0] * (T[0, 0] - T[1, 0]) * dx / (2 * dy)
                     - k[0, 0] * (T[0, 0] - T[0, 1]) * dy / (2 * dx)
                 ) * dt / (rho[0, 0] * cp[0, 0] * 0.5 * dx * 0.5 * dy)
 
                 # 右上边界-点
                 T[-1, -1] = T_old_iter[-1, -1] + (
-                    (-0.5 * dy * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
-                    + (-0.5 * dx * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -0.5
+                        * dy
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
+                    + (
+                        -0.5
+                        * dx
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     - k[-1, -1] * (T[-1, -1] - T[-2, -1]) * dx / (2 * dy)
                     - k[-1, -1] * (T[-1, -1] - T[-1, -2]) * dy / (2 * dx)
                 ) * dt / (rho[-1, -1] * cp[-1, -1] * 0.5 * dx * 0.5 * dy)
 
                 # 右下边界-点
                 T[0, -1] = T_old_iter[0, -1] + (
-                    (-(0.5 * dy) * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B))
+                    (
+                        -0.5
+                        * dy
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
+                    )
                     + (
-                        -(0.5 * dx)
-                        * calculator.mold_heat_flux(i * dt, A=q_k_A, B=q_k_B)
+                        -0.5
+                        * dx
+                        * calculator.mold_heat_flux(round(i * dt, 4), A=q_k_A, B=q_k_B)
                     )
                     - k[0, -1] * (T[0, -1] - T[1, -1]) * dx / (2 * dy)
                     - k[0, -1] * (T[0, -1] - T[0, -2]) * dy / (2 * dx)
@@ -384,7 +398,7 @@ def solve_transient_heat_conduction(
 
         time_history.append(i * dt)
         temp_history.append(T.copy())
-        ic(i)
+        ic(round(i * dt, 4))
     return X, Y, T, time_history, temp_history
 
 
@@ -436,17 +450,24 @@ if __name__ == "__main__":
     # 测试基础热传导求解器
     print("\n=== 测试基础热传导求解器 ===")
     Lx, Ly = 0.15, 0.1  # 区域尺寸(m)
-    dt = 0.1  # 时间步长(s)
+    dt = 0.001  # 时间步长(s)
 
     nx = 30
     ny = 20
     dx = Lx / nx
     dy = Ly / ny
-    total_time = 5  # 总时间(s)
+    total_time = 0.5  # 总时间(s)
     initial_temp = np.full((nx, ny), 1550)  # 初始温度场(10x10网格,1500℃)
+    q_k_a = 2860  # 顶部热流密度系数A [kW/m²]
+    q_k_b = 276  # 右侧热流密度系数B [kW/m²]
+
+    from convergence_detection import convergence_detection
+
+    message = convergence_detection(initial_temp, dt, dx, dy)  # 检测收敛性
+    ic(message)
 
     # 测试第三类边界条件
-    print("\n测试第三类边界条件:")
+    print("\n测试第二类边界条件:")
     X, Y, T, times, temps = solve_transient_heat_conduction(
         Lx,
         Ly,
@@ -455,11 +476,9 @@ if __name__ == "__main__":
         dt,
         total_time,
         initial_temp,
-        boundary_type=3,
-        h_top=630,
-        h_right=1900,
-        sigma=0.8,
+        q_k_A=q_k_a,
+        q_k_B=q_k_b,
+        boundary_type=2,
     )
-    import matplotlib.pyplot as plt
 
     plot_heatmap(T, Lx, Ly)

@@ -1,0 +1,232 @@
+\documentclass{ctexart}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{二维非稳态热传导方程隐式差分格式矩阵结构分析}
+\author{传热学数值分析}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{控制方程}
+考虑二维非稳态热传导方程：
+\begin{equation}
+\frac{\partial T}{\partial t} = \alpha \left( \frac{\partial^2 T}{\partial x^2} + \frac{\partial^2 T}{\partial y^2} \right)
+\label{eq:heat}
+\end{equation}
+其中：
+\begin{itemize}
+\item $T = T(x,y,t)$ 为温度场
+\item $\alpha$ 为热扩散系数
+\item $t$ 为时间变量
+\item $(x,y)$ 为空间坐标
+\end{itemize}
+
+\section{数值离散}
+
+\subsection{空间-时间离散}
+将求解域离散为均匀网格：
+\begin{itemize}
+\item 空间步长：$\Delta x$, $\Delta y$
+\item 时间步长：$\Delta t$
+\item 网格点索引：$(i,j)$ 对应 $(x_i,y_j)$
+\item 时间步索引：$n$ 对应 $t_n$
+\end{itemize}
+
+\subsection{隐式向后差分格式}
+对时间项采用一阶向后差分：
+\begin{equation}
+\frac{\partial T}{\partial t} \bigg|_{i,j}^{n+1} \approx \frac{T_{i,j}^{n+1} - T_{i,j}^n}{\Delta t}
+\end{equation}
+
+对空间项采用二阶中心差分：
+\begin{align}
+\frac{\partial^2 T}{\partial x^2} \bigg|_{i,j}^{n+1} &\approx \frac{T_{i-1,j}^{n+1} - 2T_{i,j}^{n+1} + T_{i+1,j}^{n+1}}{(\Delta x)^2} \\
+\frac{\partial^2 T}{\partial y^2} \bigg|_{i,j}^{n+1} &\approx \frac{T_{i,j-1}^{n+1} - 2T_{i,j}^{n+1} + T_{i,j+1}^{n+1}}{(\Delta y)^2}
+\end{align}
+
+\subsection{全离散方程}
+代入控制方程(\ref{eq:heat})得：
+\begin{equation}
+\frac{T_{i,j}^{n+1} - T_{i,j}^n}{\Delta t} = \alpha \left( \frac{T_{i-1,j}^{n+1} - 2T_{i,j}^{n+1} + T_{i+1,j}^{n+1}}{(\Delta x)^2} + \frac{T_{i,j-1}^{n+1} - 2T_{i,j}^{n+1} + T_{i,j+1}^{n+1}}{(\Delta y)^2} \right)
+\end{equation}
+
+\section{矩阵系统推导}
+
+\subsection{方程重排}
+定义常数：
+\begin{align}
+r_x &= \frac{\alpha \Delta t}{(\Delta x)^2} \\
+r_y &= \frac{\alpha \Delta t}{(\Delta y)^2}
+\end{align}
+
+重排方程：
+\begin{equation}
+-r_x T_{i-1,j}^{n+1} - r_y T_{i,j-1}^{n+1} + (1 + 2r_x + 2r_y) T_{i,j}^{n+1} - r_x T_{i+1,j}^{n+1} - r_y T_{i,j+1}^{n+1} = T_{i,j}^n
+\label{eq:discrete}
+\end{equation}
+
+\subsection{节点排序与索引映射}
+将二维网格按行优先顺序展开为一维向量：
+\begin{equation}
+\mathbf{T}^{n+1} = \begin{bmatrix}
+T_{0,0} \\
+T_{0,1} \\
+\vdots \\
+T_{0,N_y-1} \\
+T_{1,0} \\
+T_{1,1} \\
+\vdots \\
+T_{N_x-1,N_y-1}
+\end{bmatrix}
+\end{equation}
+索引映射：
+\begin{equation}
+k(i,j) = i \times N_y + j
+\end{equation}
+其中 $N_y$ 为 y 方向节点数。
+
+\subsection{矩阵元素分析}
+根据方程(\ref{eq:discrete})，对内部节点 $(i,j)$：
+\begin{center}
+\begin{tabular}{c|c|l}
+位置 & 矩阵行 & 非零元素 \\
+\midrule
+自身 & $k(i,j)$ & $A_{k,k} = 1 + 2r_x + 2r_y$ \\
+左邻 & $k(i-1,j)$ & $A_{k,k-N_y} = -r_x$ \\
+右邻 & $k(i+1,j)$ & $A_{k,k+N_y} = -r_x$ \\
+下邻 & $k(i,j-1)$ & $A_{k,k-1} = -r_y$ \\
+上邻 & $k(i,j+1)$ & $A_{k,k+1} = -r_y$ \\
+\end{tabular}
+\end{center}
+
+\subsection{矩阵结构}
+系统矩阵 $A$ 为分块五对角矩阵：
+\begin{equation}
+A = \begin{bmatrix}
+B_0 & C_0 & 0 & \cdots & 0 \\
+A_1 & B_1 & C_1 & \ddots & \vdots \\
+0 & A_2 & B_2 & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & C_{N_x-2} \\
+0 & \cdots & 0 & A_{N_x-1} & B_{N_x-1}
+\end{bmatrix}
+\end{equation}
+
+其中：
+\begin{itemize}
+\item $B_i$：大小为 $N_y \times N_y$ 的三对角矩阵
+\item $A_i$, $C_i$：大小为 $N_y \times N_y$ 的对角矩阵
+\end{itemize}
+
+具体子矩阵结构：
+\begin{align}
+B_i &= \begin{bmatrix}
+d & -r_y & 0 & \cdots & 0 \\
+-r_y & d & -r_y & \ddots & \vdots \\
+0 & -r_y & d & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & -r_y \\
+0 & \cdots & 0 & -r_y & d
+\end{bmatrix}, \quad d = 1 + 2r_x + 2r_y \\
+A_i &= \operatorname{diag}(-r_x, -r_x, \dots, -r_x) \\
+C_i &= \operatorname{diag}(-r_x, -r_x, \dots, -r_x)
+\end{align}
+
+\section{物理与数学特性}
+
+\subsection{物理意义}
+矩阵结构反映热传导的物理特性：
+\begin{itemize}
+\item \textbf{局部性}：热传导仅与相邻节点耦合
+\item \textbf{各向异性}：$r_x \neq r_y$ 时，x 和 y 方向传热不同
+\item \textbf{守恒性}：对角占优保证数值稳定性
+\end{itemize}
+
+\subsection{数学特性}
+\begin{itemize}
+\item \textbf{稀疏性}：每行仅 5 个非零元素
+\item \textbf{对称性}：当 $\Delta x = \Delta y$ 时对称
+\item \textbf{对角占优}：$|A_{k,k}| \geq \sum_{j \neq k} |A_{k,j}|$
+\item \textbf{正定性}：特征值实部为正
+\end{itemize}
+
+\section{求解方法}
+
+\subsection{直接解法}
+\begin{equation}
+A\mathbf{T}^{n+1} = \mathbf{b}^n
+\end{equation}
+其中 $\mathbf{b}^n$ 包含右端项和边界条件。
+
+常用算法：
+\begin{itemize}
+\item LU 分解（适用于中小规模问题）
+\item 追赶法（特殊五对角矩阵）
+\item 稀疏矩阵求解器（如 SuperLU）
+\end{itemize}
+
+\subsection{迭代解法}
+\begin{itemize}
+\item Gauss-Seidel 迭代
+\item 共轭梯度法（CG）
+\item 多重网格法（高效）
+\end{itemize}
+
+\subsection{交替方向隐式法（ADI）}
+将二维问题分解为两个一维问题：
+\begin{align}
+\left(1 - r_x \delta_x^2\right) T^{n+1/2} &= \left(1 + r_y \delta_y^2\right) T^n \\
+\left(1 - r_y \delta_y^2\right) T^{n+1} &= \left(1 + r_x \delta_x^2\right) T^{n+1/2}
+\end{align}
+每步仅需求解三对角矩阵系统。
+
+\section{边界条件处理}
+
+\subsection{第二类边界条件}
+对边界节点 $(i,j) \in \partial \Omega$：
+\begin{equation}
+-k \frac{\partial T}{\partial n} = q
+\end{equation}
+离散形式：
+\begin{itemize}
+\item \textbf{左边界}($i=0$)：$-k \frac{T_{1,j} - T_{0,j}}{\Delta x} \approx q_{\text{left}}$
+\item \textbf{右边界}($i=N_x-1$)：$-k \frac{T_{N_x-1,j} - T_{N_x-2,j}}{\Delta x} \approx q_{\text{right}}$
+\item 类似处理其他边界
+\end{itemize}
+
+\subsection{角点处理}
+如左下角 $(0,0)$：
+\begin{equation}
+\frac{-k}{\sqrt{2}} \left( \frac{T_{1,0} - T_{0,0}}{\Delta x} + \frac{T_{0,1} - T_{0,0}}{\Delta y} \right) \approx q_{\text{corner}}
+\end{equation}
+
+\section{稳定性分析}
+
+隐式格式的稳定性由矩阵特征值决定：
+\begin{equation}
+\rho(I - \Delta t \cdot A) < 1
+\end{equation}
+其中 $\rho$ 为谱半径。
+
+von Neumann 稳定性分析显示隐式格式\textbf{无条件稳定}：
+\begin{equation}
+|g(k)| = \frac{1}{|1 + 4r_x \sin^2(k_x \Delta x / 2) + 4r_y \sin^2(k_y \Delta y / 2)|} \leq 1
+\end{equation}
+其中 $g(k)$ 为增长因子。
+
+\section{总结}
+二维热传导方程隐式离散化形成五对角矩阵，由离散方程的局部耦合性质决定：
+\begin{enumerate}
+\item 热传导的物理机制仅涉及相邻节点
+\item 空间二阶导数离散产生五点耦合
+\item 行优先排序产生五对角块结构
+\end{enumerate}
+此结构虽然比一维复杂，但仍保持稀疏性，可高效求解。
+
+\end{document}

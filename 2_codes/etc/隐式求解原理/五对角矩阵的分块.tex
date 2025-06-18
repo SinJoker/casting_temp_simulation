@@ -1,0 +1,178 @@
+\documentclass{ctexart}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{multirow}
+
+\title{分块五对角矩阵：二维热传导方程数值离散结构解析}
+\author{数值传热学分析}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{引言}
+在二维热传导方程的数值求解中，隐式向后差分格式会产生特定的矩阵结构。本文深入分析这种结构如何从五对角矩阵演化为分块五对角矩阵，揭示其数学本质及物理意义。
+
+\section{五对角矩阵基本结构}
+考虑$N_x \times N_y$网格系统，其线性系统矩阵为五对角形式：
+$$
+A = \begin{pmatrix}
+d_0 & e_0 & f_0 & 0 & \cdots & \cdots & 0 \\
+c_1 & d_1 & e_1 & f_1 & \ddots & & \vdots \\
+b_2 & c_2 & d_2 & e_2 & f_2 & \ddots & \vdots \\
+0 & b_3 & c_3 & d_3 & \ddots & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & \ddots & e_{n-2} & f_{n-2} \\
+\vdots & & \ddots & b_{n-1} & c_{n-1} & d_{n-1} & e_{n-1} \\
+0 & \cdots & \cdots & 0 & b_n & c_n & d_n
+\end{pmatrix}
+$$
+其中非零元素出现在主对角线和其相邻的四个对角线上。
+
+\section{二维热传导问题离散方程}
+二维热传导方程隐式离散格式：
+\begin{equation}
+-r_x T_{i-1,j}^{n+1} - r_y T_{i,j-1}^{n+1} + (1+2r_x+2r_y)T_{i,j}^{n+1} - r_x T_{i+1,j}^{n+1} - r_y T_{i,j+1}^{n+1} = T_{i,j}^n
+\label{eq:discrete}
+\end{equation}
+其中$r_x = \frac{\alpha \Delta t}{(\Delta x)^2}$, $r_y = \frac{\alpha \Delta t}{(\Delta y)^2}$。
+
+\section{分块矩阵结构推导}
+
+\subsection{节点排序方法}
+采用行优先(lexicographical)排序：
+$$
+\mathbf{T} = \begin{pmatrix}
+T_{0,0} & T_{0,1} & \cdots & T_{0,N_y-1} & T_{1,0} & \cdots & T_{N_x-1,N_y-1}
+\end{pmatrix}^T
+$$
+索引映射：$k(i,j) = i \cdot N_y + j$
+
+\subsection{矩阵元素分析}
+\begin{table}[htbp]
+\centering
+\caption{矩阵元素与物理意义对应关系}
+\begin{tabular}{c|c|c}
+类型 & 矩阵位置 & 物理耦合 \\ \hline
+自耦合 & $A_{k,k} = 1+2r_x+2r_y$ & 节点自身 \\
+行内左邻 & $A_{k,k-1} = -r_y$ & $T_{i,j} \leftrightarrow T_{i,j-1}$ \\
+行内右邻 & $A_{k,k+1} = -r_y$ & $T_{i,j} \leftrightarrow T_{i,j+1}$ \\
+上行同列 & $A_{k,k-N_y} = -r_x$ & $T_{i,j} \leftrightarrow T_{i-1,j}$ \\
+下行同列 & $A_{k,k+N_y} = -r_x$ & $T_{i,j} \leftrightarrow T_{i+1,j}$ \\
+\end{tabular}
+\end{table}
+
+\subsection{分块矩阵形成}
+将矩阵划分为$N_x \times N_x$个块，每个块大小为$N_y \times N_y$：
+$$
+A = \begin{pmatrix}
+B_0 & C_0 & 0 & \cdots & 0 \\
+A_1 & B_1 & C_1 & \ddots & \vdots \\
+0 & A_2 & B_2 & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & C_{N_x-2} \\
+0 & \cdots & 0 & A_{N_x-1} & B_{N_x-1}
+\end{pmatrix}
+$$
+
+\subsubsection{对角块$B_i$结构}
+$B_i$描述第$i$行内的耦合关系，为三对角矩阵：
+$$
+B_i = \begin{pmatrix}
+1+2r_x+2r_y & -r_y & 0 & \cdots & 0 \\
+-r_y & 1+2r_x+2r_y & -r_y & \ddots & \vdots \\
+0 & -r_y & 1+2r_x+2r_y & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & -r_y \\
+0 & \cdots & 0 & -r_y & 1+2r_x+2r_y
+\end{pmatrix}
+$$
+
+\subsubsection{次对角块$A_i$结构}
+$A_i$描述与上一行$(i-1)$的耦合，为对角矩阵：
+$$
+A_i = \begin{pmatrix}
+-r_x & 0 & \cdots & 0 \\
+0 & -r_x & \ddots & \vdots \\
+\vdots & \ddots & \ddots & 0 \\
+0 & \cdots & 0 & -r_x
+\end{pmatrix}
+$$
+
+\subsubsection{上次对角块$C_i$结构}
+$C_i$描述与下一行$(i+1)$的耦合，也为对角矩阵：
+$$
+C_i = \begin{pmatrix}
+-r_x & 0 & \cdots & 0 \\
+0 & -r_x & \ddots & \vdots \\
+\vdots & \ddots & \ddots & 0 \\
+0 & \cdots & 0 & -r_x
+\end{pmatrix}
+$$
+
+\section{矩阵性质分析}
+
+\subsection{对角占优性}
+对角块$B_i$严格对角占优：
+$$
+|B_i[j,j]| = |1+2r_x+2r_y| > 2r_x + 2r_y = \sum_{k \neq j} |B_i[j,k]| + |A_i[j,j]| + |C_i[j,j]|
+$$
+
+\subsection{稀疏性分析}
+非零元素比例：
+$$
+\frac{\text{非零元素数}}{\text{总元素数}} = \frac{5N_xN_y}{(N_xN_y)^2} = \frac{5}{N_xN_y}
+$$
+例如当$N_x = N_y = 100$时，非零元素占比仅0.05\%。
+
+\section{边界条件处理}
+
+\subsection{第二类边界条件离散}
+以左边界($i=0$)为例：
+$$
+-k \frac{\partial T}{\partial x}\bigg|_{x=0} \approx -k \frac{-3T_{0,j} + 4T_{1,j} - T_{2,j}}{2\Delta x} = q_{\text{left}}
+$$
+
+\subsection{角点处理}
+左下角($i=0,j=0$)采用混合近似：
+$$
+\begin{cases}
+-k \frac{-3T_{0,0} + 4T_{1,0} - T_{2,0}}{2\Delta x} = q_x \\
+-k \frac{-3T_{0,0} + 4T_{0,1} - T_{0,2}}{2\Delta y} = q_y
+\end{cases}
+$$
+
+\section{分块矩阵求解优势}
+
+\subsection{存储优化}
+传统存储：$O((N_xN_y)^2)$\\
+分块存储：$O(5N_xN_y)$
+
+\subsection{求解算法}
+块三对角系统求解算法：
+\begin{align*}
+&\text{// 前向消去}\\
+&\text{for } i = 1 \text{ to } N_x-1 \\
+&\quad B_i := B_i - A_i \cdot B_{i-1}^{-1} \cdot C_{i-1} \\
+&\quad \mathbf{b}_i := \mathbf{b}_i - A_i \cdot B_{i-1}^{-1} \cdot \mathbf{b}_{i-1} \\
+& \\
+&\text{// 回代}\\
+&\mathbf{T}_{N_x-1} = B_{N_x-1}^{-1} \mathbf{b}_{N_x-1} \\
+&\text{for } i = N_x-2 \text{ downto } 0 \\
+&\quad \mathbf{T}_i = B_i^{-1} (\mathbf{b}_i - C_i \mathbf{T}_{i+1})
+\end{align*}
+
+\section{结论}
+本文证明二维热传导方程隐式离散：
+\begin{itemize}
+\item 自然形成分块五对角矩阵结构
+\item 分块结构是物理耦合关系的数学表征
+\item 提供高效存储和求解框架
+\item 为大型问题求解提供理论基础
+\end{itemize}
+
+分块结构不是人为选择，而是热传导物理特性在数值离散中的必然呈现。
+
+\end{document}
